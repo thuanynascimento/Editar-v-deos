@@ -143,10 +143,10 @@ Velocidade: ~3× o tempo do vídeo (vídeo de 1 min ≈ 3 min). Vídeos > 2 min:
 ## Estilo Paulo Rosa Luz (aprovado — folha: https://claude.ai/artifact/QzkuoXoSTmkV4wztmb6TVb)
 
 Vídeos de salão (vertical 1080×1920, conversa enquanto trabalha). Sempre:
-- **Montagem com `tools/montagem.py`** no lugar do `render.py`: nada de corte seco. Mistura de
-  0,15 s entre trechos da fala; troca de ambiente 0,4 s; troca de etapa 0,5 s + zoom 0.04;
-  takes extras (b-roll, sem som) como camadas com fade 0,4 s e aproximação lenta, definidos em
-  `edit/montagem.json`. Reordenar trechos no `edl.json` é permitido (história > cronologia).
+- **Montagem com `tools/montagem.py --dissolve 0`** no lugar do `render.py`: emendas da fala
+  com CORTE SECO (a usuária testou mistura de 0,15–0,5 s e achou que parecia falha — não usar).
+  Suavidade só nos takes extras (b-roll, sem som), que entram como camadas com fade 0,4 s e
+  aproximação lenta, definidos em `edit/montagem.json` (sem "transicoes"). Reordenar trechos no `edl.json` é permitido (história > cronologia).
 - **Legenda**: `make_captions.py --lowercase --acumular --sem-ponto --weight 800 --emph-weight 800
   --accent "#D9985F" --y 60 --width 76 --size 58 --grupos hyperframes/grupos.txt`
   (um grupo por ideia, até 2 linhas; 1 destaque caramelo por frase: termos de cabelo/produto).
