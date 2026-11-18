@@ -60,6 +60,11 @@ Depois **eu reviso o rascunho lendo `takes_packed.md` e o relatório**:
   de novo. Na dúvida sobre um ponto, olhar `vendor/video-use/helpers/timeline_view.py <video> ini fim`.
 - Sempre manter a ÚLTIMA tentativa de uma frase repetida (costuma ser a boa).
 - Nunca cortar no meio de palavra; padding 30–200 ms (já no auto_edl).
+- `--drop` apaga as palavras que encostam na faixa; o Whisper às vezes estica palavras curtas
+  ("nas", "em", "que") por cima de pausas, então para encurtar respiros DENTRO de frases divida os
+  ranges do edl.json pelos silêncios do `silencedetect` (-35 dB) em vez de usar `--drop`.
+- Se o corte tiver muitos respiros cortados, `words.json` pode duplicar palavras de borda: tire os
+  tempos de novo do `cortado.mp4` (faster-whisper `word_timestamps=True`, passando o áudio como array).
 - O auto_edl corta "hum/ahn/éé" puros; "né", "tipo", "então" ficam — julgar caso a caso.
 - Ritmo: `--max-gap` 0.45 s é o padrão (dinâmico). Mais calmo: 0.7. Mais acelerado: 0.3.
 
@@ -105,7 +110,12 @@ python tools/make_captions.py $H --emphasis "palavra,expressão de ênfase" --ac
 ```
 Padrão: Montserrat branca sem contorno (sombra suave), centralizada, `--y` = centro vertical em %
 da altura, `--width 72–78` para não invadir os botões do Reels. Grupos de até 4 palavras/22
-caracteres. Reels: `check --safe-zone reels` (a área do TikTok é mais estreita à direita).
+caracteres. Reels: `check --safe-zone reels` (a área do TikTok é mais estreita à direita). A faixa segura do
+Reels no HyperFrames é **14–65% da altura, 6–94% da largura**: títulos com topo ≥ 14% (caixa do
+título ≈ cy − 0.88·size) e nada de janela/cartão abaixo de 65%. Se um cartão precisa ocupar a área da
+legenda, exclua a legenda nesse trecho (`--exclude`) e ponha a legenda DENTRO do cartão.
+Com a cabeça alta no quadro, títulos atrás do recorte ficam ilegíveis (o check acusa `text_occluded`):
+use títulos menores NA FRENTE (`"z": 54`), passando só pelo cabelo.
 
 Estilo "Reels de autoridade" (referência da cliente em videos/reels-01/referencia):
 ```bash

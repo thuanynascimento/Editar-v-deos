@@ -38,7 +38,8 @@ FILLERS = {"hum", "humm", "hm", "ahn", "ah", "eh", "e", "ee", "eee", "han", "uhm
            "hã", "ha", "tipo", "ne"}
 # Só tratamos como filler se a palavra estiver isolada por pausa ou repetida; "e"/"tipo"/"né"
 # são palavras reais. Fillers "puros" (sem significado) são cortados sempre:
-PURE_FILLERS = {"hum", "humm", "hm", "ahn", "ah", "ee", "eee", "han", "uhm", "um", "uh", "ha"}
+# ("um" fica fora: em português é artigo — "comprar um imóvel".)
+PURE_FILLERS = {"hum", "humm", "hm", "ahn", "ah", "ee", "eee", "han", "uhm", "uh", "ha"}
 
 
 def probe_duration(video: Path) -> float:

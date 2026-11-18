@@ -88,7 +88,9 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
     big_html = f'<div id="{tid}-big">{letters}</div>' if part != "script" else ""
     if part == "big":
         script_html = ""
-    markup = (f'<div id="{tid}-box" data-layout-allow-overflow data-layout-allow-overlap>'
+    # atrás do recorte da pessoa é intencional (estilo da referência)
+    occl = " data-layout-allow-occlusion" if part == "big" else ""
+    markup = (f'<div id="{tid}-box" data-layout-allow-overflow data-layout-allow-overlap{occl}>'
               f'{big_html}{script_html}</div>')
     n = len(big)
     js = [] if part == "script" else [
@@ -173,7 +175,8 @@ def main() -> None:
 {FONTS}
     #root {{ position: absolute; inset: 0; background: transparent; }}
     .S {{ font-family: "Yellowtail", cursive; color: #fff; white-space: nowrap; transform: rotate(-5deg);
-      text-shadow: 0 3px 14px rgba(0,0,0,.45); line-height: 1; }}
+      text-shadow: 0 0 3px rgba(0,0,0,.35), 0 3px 14px rgba(0,0,0,.6); line-height: 1;
+      padding: 0.12em 0.32em; /* folga: a cauda da última letra não é cortada pelo wipe */ }}
 {css}
   </style>
   <div id="root" data-composition-id="{tid}" data-width="{W}" data-height="{H}" data-layout-allow-overflow>
