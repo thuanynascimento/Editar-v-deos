@@ -69,6 +69,12 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
     s_size = int(spec.get("script_size", max(70, size * 0.62)))
     script_html = (f'<div id="{tid}-s" class="S" style="font-size:{s_size}px">{html.escape(script)}</div>'
                    if script else "")
+    # manuscrito "below" (padrão, sobre fotos) ou "above" (sobre a pessoa: fica entre o topo da
+    # tela e a cabeça, nunca no rosto), à esquerda do centro para começar a leitura
+    if spec.get("script_pos", "below") == "above":
+        s_pos = f"left: {int(W * 0.14)}px; top: {-int(s_size * 1.02)}px;"
+    else:
+        s_pos = f"right: {int(W * 0.08)}px; top: {int(size * 0.80)}px;"
     shadow = (f"0 0 {int(10 * glow)}px {rgba(accent, .95)}, 0 0 {int(26 * glow)}px {rgba(accent, .7)}, "
               f"0 0 {int(60 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.35)")
     css = f"""
@@ -77,7 +83,7 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
       font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 900; font-size: {size}px;
       line-height: 1; letter-spacing: -0.01em; color: {accent}; text-shadow: {shadow}; }}
     #{tid}-big .L {{ display: inline-block; }}
-    #{tid}-s {{ position: absolute; right: {int(W * 0.08)}px; top: {int(size * 0.80)}px; }}
+    #{tid}-s {{ position: absolute; {s_pos} }}
 """
     big_html = f'<div id="{tid}-big">{letters}</div>' if part != "script" else ""
     if part == "big":
@@ -88,7 +94,7 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
     js = [] if part == "script" else [
         f'tl.fromTo("#{tid}-big .L", {{ opacity: 0, y: -60, scale: 1.35, filter: "blur(14px)" }}, '
         f'{{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)", duration: 0.26, ease: "power3.out", '
-        f'stagger: {min(0.045, 0.5 / max(n, 1)):.3f} }}, {s:.3f});',
+        f'stagger: {min(0.045, 0.5 / max(n, 1)):.3f} }}, {spec.get("big_at", s):.3f});',
     ]
     if script and part != "big":
         at = spec.get("script_at", s + 0.35)
@@ -96,8 +102,9 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
                   f'{{ opacity: 1, clipPath: "inset(-20% 0% -20% 0%)", x: 0, duration: 0.35, ease: "power2.out" }}, {at:.3f});')
     # brilho "respira" levemente enquanto está na tela
     if part != "script":
-      js.append(f'tl.fromTo("#{tid}-big", {{ scale: 1 }}, {{ scale: 1.035, duration: {max(0.4, e - s - 0.9):.3f}, '
-              f'ease: "sine.inOut" }}, {s + 0.5:.3f});')
+      b0 = spec.get("big_at", s)
+      js.append(f'tl.fromTo("#{tid}-big", {{ scale: 1 }}, {{ scale: 1.035, duration: {max(0.4, e - b0 - 0.9):.3f}, '
+              f'ease: "sine.inOut" }}, {b0 + 0.5:.3f});')
     out_at = max(s + 0.6, e - 0.32)
     js.append(f'tl.to("#{tid}-box", {{ opacity: 0, y: -24, filter: "blur(12px)", duration: 0.28, ease: "power2.in" }}, {out_at:.3f});')
     return css, markup, js

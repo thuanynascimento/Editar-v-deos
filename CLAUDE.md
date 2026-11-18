@@ -112,6 +112,10 @@ Estilo "Reels de autoridade" (referência da cliente em videos/reels-01/referenc
 python tools/make_titles.py $H titulos.json --accent "#5CE1E6"   # PALAVRA neon + manuscrito; "fim"
 node_modules/.bin/hyperframes remove-background $P/edit/cortado.mp4 -o $P/edit/recorte/pessoa.webm --quality best
 ```
+Sobre a pessoa, NUNCA manuscrito no rosto: meça o topo da cabeça no alpha do recorte e use
+`"script_pos": "above"` (manuscrito curto entre o topo da tela e a cabeça), `size` ~150, `y` ~24.
+Entrega: mandar também cópia leve (CRF 20, ~13 MB) com SendUserFile `display: "attach"` — o player
+do chat não oferece salvar em alguns celulares.
 Recorte da pessoa (z 50) por cima dos títulos neon → título ATRÁS dela; o manuscrito vai numa camada
 `-esc` NA FRENTE (z 55). Fontes em `assets/fonts/` (npm pack @fontsource/yellowtail @fontsource/montserrat).
 remove-background: se falhar instalando onnxruntime-node, rode
