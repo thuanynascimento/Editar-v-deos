@@ -53,6 +53,11 @@ def fit_size(text: str, max_w: int, base: int, per_char: float = 0.80) -> int:
     return int(min(base, max_w / (len(text) * per_char)))
 
 
+FILL = None          # cor do texto grande (None = cor de destaque); ex.: "#0A0A0A" = preto com brilho
+SCRIPT_COLOR = "#fff"  # cor do manuscrito
+SCRIPT_SHADOW = "0 0 3px rgba(0,0,0,.35), 0 3px 14px rgba(0,0,0,.6)"
+
+
 def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"):
     """part: "big" = só a palavra grande (camada ATRÁS da pessoa); "script" = só o manuscrito
     (camada NA FRENTE, para não sumir atrás da cabeça); "all" = os dois juntos."""
@@ -67,6 +72,8 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
         for i, ch in enumerate(big))
     script = spec.get("script", "")
     s_size = int(spec.get("script_size", max(70, size * 0.62)))
+    if spec.get("script_max_w") and script:  # Yellowtail ≈ 0.40 em por caractere
+        s_size = int(min(s_size, spec["script_max_w"] / (0.40 * len(script))))
     script_html = (f'<div id="{tid}-s" class="S" style="font-size:{s_size}px">{html.escape(script)}</div>'
                    if script else "")
     # manuscrito "below" (padrão, sobre fotos) ou "above" (sobre a pessoa: fica entre o topo da
@@ -81,7 +88,7 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; height: {box_h}px; overflow: visible; }}
     #{tid}-big {{ position: absolute; left: 0; top: 0; width: {W}px; text-align: center; white-space: nowrap;
       font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 900; font-size: {size}px;
-      line-height: 1; letter-spacing: -0.01em; color: {accent}; text-shadow: {shadow}; }}
+      line-height: 1; letter-spacing: -0.01em; color: {FILL or accent}; text-shadow: {shadow}; }}
     #{tid}-big .L {{ display: inline-block; }}
     #{tid}-s {{ position: absolute; {s_pos} }}
 """
@@ -128,7 +135,7 @@ def fim(spec: dict, W: int, H: int, accent: str, glow: float):
       color: #fff; line-height: 1.1; text-shadow: 0 3px 16px rgba(0,0,0,.45); }}
     #{tid}-line .w {{ display: inline-block; }}
     #{tid}-big {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 900; font-style: italic;
-      font-size: {big_size}px; line-height: 1.02; color: {accent}; text-shadow: {shadow}; margin-top: 6px; white-space: nowrap; }}
+      font-size: {big_size}px; line-height: 1.02; color: {FILL or accent}; text-shadow: {shadow}; margin-top: 6px; white-space: nowrap; }}
 """
     markup = f'<div id="{tid}-box" data-layout-allow-overflow><div id="{tid}-line">{wl}</div><div id="{tid}-big">{html.escape(big)}</div></div>'
     js = []
@@ -145,8 +152,15 @@ def main() -> None:
     ap.add_argument("hf_dir", type=Path)
     ap.add_argument("spec", type=Path)
     ap.add_argument("--accent", default="#5CE1E6")
+    ap.add_argument("--fill", default=None, help="cor do texto grande (padrão: a de destaque). Ex.: \"#0A0A0A\" = preto com brilho neon")
+    ap.add_argument("--script-color", default="#fff", help="cor do manuscrito")
     ap.add_argument("--glow", type=float, default=1.0, help="intensidade do brilho neon (1 = padrão)")
     args = ap.parse_args()
+    global FILL, SCRIPT_COLOR, SCRIPT_SHADOW
+    FILL, SCRIPT_COLOR = args.fill, args.script_color
+    h = SCRIPT_COLOR.lstrip("#")
+    if len(h) == 6 and sum(int(h[i:i + 2], 16) for i in (0, 2, 4)) < 200:  # manuscrito escuro → halo claro
+        SCRIPT_SHADOW = "0 0 4px rgba(255,255,255,.85), 0 0 16px rgba(255,255,255,.6)"
 
     hf = args.hf_dir.resolve()
     page = (hf / "index.html").read_text()
@@ -174,8 +188,8 @@ def main() -> None:
   <style>
 {FONTS}
     #root {{ position: absolute; inset: 0; background: transparent; }}
-    .S {{ font-family: "Yellowtail", cursive; color: #fff; white-space: nowrap; transform: rotate(-5deg);
-      text-shadow: 0 0 3px rgba(0,0,0,.35), 0 3px 14px rgba(0,0,0,.6); line-height: 1;
+    .S {{ font-family: "Yellowtail", cursive; color: {SCRIPT_COLOR}; white-space: nowrap; transform: rotate(-5deg);
+      text-shadow: {SCRIPT_SHADOW}; line-height: 1;
       padding: 0.12em 0.32em; /* folga: a cauda da última letra não é cortada pelo wipe */ }}
 {css}
   </style>

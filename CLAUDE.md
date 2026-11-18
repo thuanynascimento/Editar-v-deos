@@ -116,6 +116,10 @@ título ≈ cy − 0.88·size) e nada de janela/cartão abaixo de 65%. Se um car
 legenda, exclua a legenda nesse trecho (`--exclude`) e ponha a legenda DENTRO do cartão.
 Com a cabeça alta no quadro, títulos atrás do recorte ficam ilegíveis (o check acusa `text_occluded`):
 use títulos menores NA FRENTE (`"z": 54`), passando só pelo cabelo.
+Cliente da reels-02 NÃO quer palavra nenhuma encostando na cabeça: meça o contorno da pessoa
+(alpha do recorte, pior caso de todo o vídeo, por coluna) e deixe a caixa do título ≥ 20 px acima;
+manuscrito ao lado do rosto com `"script_max_w"`. Títulos em preto com brilho: `make_titles.py
+--fill "#0A0A0A" --script-color "#0A0A0A"` (sobre roupa preta, aumente `--glow`).
 
 Estilo "Reels de autoridade" (referência da cliente em videos/reels-01/referencia):
 ```bash
