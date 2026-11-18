@@ -120,6 +120,9 @@ Recorte da pessoa (z 50) por cima dos títulos neon → título ATRÁS dela; o m
 `-esc` NA FRENTE (z 55). Fontes em `assets/fonts/` (npm pack @fontsource/yellowtail @fontsource/montserrat).
 remove-background: se falhar instalando onnxruntime-node, rode
 `npm install onnxruntime-node@1.21.1 --ignore-scripts --prefix ~/.cache/hyperframes/optional/onnxruntime-node@1.21.1`.
+"Neon preto" (letra preta com contorno/brilho neon): `make_titles.py ... --accent "#39FF14" --fill "#000" --stroke 4`
+e `make_captions.py ... --accent "#000" --neon "#39FF14"`. Cabeça alta no quadro: `"script_pos": "left"`.
+MusicGen precisa de torch: `pip install torch transformers scipy` (do PyPI; download.pytorch.org é bloqueado).
 Filtro "laranja verde" CapCut ~30%: campo `grade` do edl.json =
 `colorbalance=rs=-0.045:gs=0.015:bs=0.03:rm=0.015:gm=0.006:bm=-0.015:rh=0.036:gh=0.012:bh=-0.036,eq=saturation=1.05:contrast=1.03`.
 
