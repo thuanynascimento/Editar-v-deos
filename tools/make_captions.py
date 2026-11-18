@@ -47,7 +47,7 @@ def group_words(words, max_words, max_chars, pause, breaks):
         nxt = words[i + 1] if i + 1 < len(words) else None
         chars = len(" ".join(x["text"] for x in cur))
         nxt_chars = chars + 1 + len(nxt["text"]) if nxt else 0
-        if (nxt is None or w["text"][-1] in ".?!,;:" or nxt["start"] - w["end"] >= pause
+        if (nxt is None or w["text"][-1] in ".?!,;:" or nxt["start"] - w["end"] >= pause or nxt.get("_cut_before")
                 or len(cur) >= max_words or nxt_chars > max_chars):
             groups.append(cur)
             cur = []
@@ -94,6 +94,9 @@ def main() -> None:
     ap.add_argument("--pause", type=float, default=0.18, help="pausa que quebra o grupo (s)")
     ap.add_argument("--uppercase", action="store_true")
     ap.add_argument("--no-shadow", action="store_true", help="tira até a sombra suave")
+    ap.add_argument("--exclude", default="",
+                    help="faixas 'ini-fim,ini-fim' (timeline do corte) cujas palavras NÃO viram legenda "
+                         "(ex.: já aparecem num título grande)")
     ap.add_argument("--lead", type=float, default=0.08, help="legenda aparece X s antes da 1ª palavra")
     args = ap.parse_args()
 
@@ -103,6 +106,13 @@ def main() -> None:
     W, H = (int(x) for x in re.search(r'data-width="(\d+)" data-height="(\d+)"', page).groups())
     root_dur = float(re.search(r'data-composition-id="main" data-start="0" data-duration="([\d.]+)"', page).group(1))
     words = [w for w in json.loads((hf / "assets" / "words.json").read_text()) if w["text"].strip()]
+    excl = [tuple(float(v) for v in r.split("-")) for r in args.exclude.split(",") if r.strip()]
+    if excl:
+        words = [w for w in words if not any(a <= w["start"] < b for a, b in excl)]
+        # uma faixa excluída quebra o grupo: marca pausa artificial
+        for i in range(1, len(words)):
+            if any(words[i - 1]["start"] < a <= words[i]["start"] for a, _ in excl):
+                words[i]["_cut_before"] = True
 
     emph = mark_emphasis(words, args.emphasis.split(","))
     for w, e in zip(words, emph):
@@ -123,6 +133,9 @@ def main() -> None:
         end = spans[gi][1] + 0.35
         if nxt - spans[gi][1] < 0.6:
             end = nxt
+        for a, _b in excl:  # não invade uma faixa excluída (título/encerramento no mesmo lugar)
+            if groups[gi][-1]["end"] - 0.01 <= a < end:
+                end = a
         spans[gi][1] = round(min(end, nxt, root_dur), 3)
         spans[gi][0] = round(spans[gi][0], 3)
 
@@ -148,9 +161,17 @@ def main() -> None:
             f'    <div id="{gid}" class="clip grp" data-start="{s}" data-duration="{round(e - s, 3)}" data-track-index="0">'
             f'<div id="{gid}-in" class="in">{" ".join(spans_html)}</div></div>')
 
+    # fonte local (assets/fonts/montserrat-<peso>-normal.woff2) garante o peso exato no render
+    font_faces = ""
+    if args.font.lower() == "montserrat":
+        for wgt in sorted({args.weight, args.emph_weight}):
+            if (hf / "assets" / "fonts" / f"montserrat-{wgt}-normal.woff2").exists():
+                font_faces += (f'    @font-face {{ font-family: "Montserrat"; font-weight: {wgt}; '
+                               f'src: url("assets/fonts/montserrat-{wgt}-normal.woff2") format("woff2"); }}\n')
     comp = f"""<!-- Legendas geradas por tools/make_captions.py — edite o texto direto aqui ou rode o script de novo. -->
 <template>
   <style>
+{font_faces}
     #root {{ position: absolute; inset: 0; background: transparent; }}
     .grp {{ position: absolute; left: 0; top: {top}px; width: {W}px; height: {cap_h}px;
       display: flex; align-items: center; justify-content: center; overflow: visible; }}

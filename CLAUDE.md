@@ -107,6 +107,18 @@ Padrão: Montserrat branca sem contorno (sombra suave), centralizada, `--y` = ce
 da altura, `--width 72–78` para não invadir os botões do Reels. Grupos de até 4 palavras/22
 caracteres. Reels: `check --safe-zone reels` (a área do TikTok é mais estreita à direita).
 
+Estilo "Reels de autoridade" (referência da cliente em videos/reels-01/referencia):
+```bash
+python tools/make_titles.py $H titulos.json --accent "#5CE1E6"   # PALAVRA neon + manuscrito; "fim"
+node_modules/.bin/hyperframes remove-background $P/edit/cortado.mp4 -o $P/edit/recorte/pessoa.webm --quality best
+```
+Recorte da pessoa (z 50) por cima dos títulos neon → título ATRÁS dela; o manuscrito vai numa camada
+`-esc` NA FRENTE (z 55). Fontes em `assets/fonts/` (npm pack @fontsource/yellowtail @fontsource/montserrat).
+remove-background: se falhar instalando onnxruntime-node, rode
+`npm install onnxruntime-node@1.21.1 --ignore-scripts --prefix ~/.cache/hyperframes/optional/onnxruntime-node@1.21.1`.
+Filtro "laranja verde" CapCut ~30%: campo `grade` do edl.json =
+`colorbalance=rs=-0.045:gs=0.015:bs=0.03:rm=0.015:gm=0.006:bm=-0.015:rh=0.036:gh=0.012:bh=-0.036,eq=saturation=1.05:contrast=1.03`.
+
 Verificar e olhar antes de renderizar:
 ```bash
 cd $H && npx hyperframes check && npx hyperframes snapshot --at 2.5,7.5,14.9
@@ -157,4 +169,5 @@ registrar aqui.
 | `make_captions.py` | 2 | Legendas palavra a palavra com ênfase, posição e quebras ajustáveis |
 | `denoise.py` | 1½ | Redução de ruído de fundo (RNNoise + perfil) → audio_limpo.wav |
 | `gerar_musica.py` | 2 | Música de fundo instrumental gerada localmente (MusicGen) |
+| `make_titles.py` | 2 | Títulos de palavra-chave neon (atrás da pessoa) + manuscrito + encerramento |
 | `render_final.py` | 2 | check → render (chrome-headless-shell) → áudio do video-use → final.mp4 |
