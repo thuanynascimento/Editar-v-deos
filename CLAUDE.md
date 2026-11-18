@@ -65,8 +65,9 @@ Depois **eu reviso o rascunho lendo `takes_packed.md` e o relatório**:
 
 Renderizar o corte:
 ```bash
-python vendor/video-use/helpers/render.py $P/edit/edl.json -o $P/edit/cortado.mp4
+python vendor/video-use/helpers/render.py $P/edit/edl.json -o $P/edit/cortado.mp4 --fps 24   # use a taxa da fonte
 ```
+Vídeo de celular: a taxa média vem quebrada (23,998) — sempre passe `--fps` com o valor inteiro.
 Conferir duração com ffprobe e, nos pontos de corte duvidosos, `timeline_view.py` no `cortado.mp4`.
 
 Antes de renderizar a primeira vez, mostrar à usuária em 3–5 linhas o que vai sair (quanto tempo
@@ -96,6 +97,15 @@ python tools/add_overlay.py $H numero ov-stat 4.6 5 --var value=50 --var prefix=
 python tools/add_overlay.py $H cta ov-cta 13.5 2.5
 python tools/add_overlay.py $H minha-cena ov-x 6 4 --custom      # composição escrita à mão
 ```
+
+Legendas (sempre por cima das animações):
+```bash
+python tools/make_captions.py $H --emphasis "palavra,expressão de ênfase" --accent "#5CE1E6" --y 58 \
+    --break "do que,uma renda"     # quebra antes de expressões, para cada linha ser uma ideia
+```
+Padrão: Montserrat branca sem contorno (sombra suave), centralizada, `--y` = centro vertical em %
+da altura, `--width 72–78` para não invadir os botões do Reels. Grupos de até 4 palavras/22
+caracteres. Reels: `check --safe-zone reels` (a área do TikTok é mais estreita à direita).
 
 Verificar e olhar antes de renderizar:
 ```bash
@@ -132,4 +142,5 @@ registrar aqui.
 | `auto_edl.py` | 1 | EDL cortando silêncios (palavras + silencedetect), fillers e repetições |
 | `prepare_hyperframes.py` | 2 | Monta projeto HyperFrames com o corte e palavras remapeadas |
 | `add_overlay.py` | 2 | Insere/lista/remove animações a partir dos templates |
+| `make_captions.py` | 2 | Legendas palavra a palavra com ênfase, posição e quebras ajustáveis |
 | `render_final.py` | 2 | check → render (chrome-headless-shell) → áudio do video-use → final.mp4 |

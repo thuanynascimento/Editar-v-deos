@@ -43,6 +43,8 @@ def main() -> None:
     ap.add_argument("duration", nargs="?", type=float)
     ap.add_argument("--var", action="append", default=[])
     ap.add_argument("--custom", action="store_true", help="compositions/<id>.html já existe; só monta")
+    ap.add_argument("--kind", default="graphics", choices=["graphics", "captions"],
+                    help="trilha no Studio: graphics (padrão) ou captions (legendas)")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--remove")
     args = ap.parse_args()
@@ -83,13 +85,15 @@ def main() -> None:
 
     # fim não pode passar do root
     root_dur = float(re.search(r'data-composition-id="main" data-start="0" data-duration="([\d.]+)"', html).group(1))
+    W, H = re.search(r'data-width="(\d+)" data-height="(\d+)"', html).groups()
     dur = min(args.duration, round(root_dur - args.start, 3))
-    z = 2 + re.sub(r"<!--.*?-->", "", html, flags=re.S).count("data-composition-src=")
+    # legendas sempre por cima de tudo (Hard Rule 1 do video-use)
+    z = 100 if args.kind == "captions" else 2 + re.sub(r"<!--.*?-->", "", html, flags=re.S).count("data-composition-src=")
     values = dict(parse_var(v) for v in args.var)
     vv = f" data-variable-values='{json.dumps(values, ensure_ascii=False)}'" if values else ""
     host = (f'\n      <div id="{args.id}" data-composition-id="{args.id}" data-composition-src="compositions/{args.id}.html"\n'
-            f'           data-start="{args.start}" data-duration="{dur}" data-track-index="1" data-track-kind="graphics"\n'
-            f'           data-width="1920" data-height="1080"{vv} style="z-index: {z}"></div>')
+            f'           data-start="{args.start}" data-duration="{dur}" data-track-index="{2 if args.kind == "captions" else 1}" data-track-kind="{args.kind}"\n'
+            f'           data-width="{W}" data-height="{H}"{vv} style="z-index: {z}"></div>')
     if MARK not in html:
         raise SystemExit("não achei o fim do #root no index.html")
     index.write_text(html.replace(MARK, host + "\n" + MARK, 1))

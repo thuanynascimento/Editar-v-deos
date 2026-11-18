@@ -3,8 +3,9 @@
 1. Roda `hyperframes check` (falha se houver erro).
 2. Renderiza edit/hyperframes → edit/final_hf.mp4 usando o chrome-headless-shell
    (captura "beginframe", ~30% mais rápida que screenshot).
-3. Troca a trilha de áudio pela do corte do video-use (já normalizado a -14 LUFS,
-   com fades de 30 ms nos cortes) — o mixer do HyperFrames sobe o volume.
+3. Troca a trilha de áudio por uma remontada da fonte com precisão de amostra (mesmos
+   cortes do EDL, fades de 30 ms, -14 LUFS) — o mixer do HyperFrames sobe o volume e o
+   concat de AAC do video-use desliza ~20 ms por corte.
 4. Confere duração e loudness.
 
 Uso:
@@ -31,6 +32,46 @@ def headless_shell() -> str | None:
     return hits[-1] if hits else None
 
 
+def build_exact_audio(edit: Path, out_wav: Path) -> None:
+    """Remonta o áudio direto da fonte, com precisão de amostra, usando as durações REAIS
+    de cada segmento de vídeo (render.py arredonda cada um para um frame inteiro). Evita o
+    deslize acumulado do AAC (priming de ~21 ms por segmento no concat -c copy).
+    Fades de 30 ms em cada corte (Hard Rule 3) + loudnorm em 2 passes (-14 LUFS, -1 dBTP)."""
+    import json
+    sys.path.insert(0, str(ROOT / "tools"))
+    from prepare_hyperframes import segment_durations  # noqa: E402
+    edl = json.loads((edit / "edl.json").read_text())
+    fps_raw = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                              "stream=r_frame_rate", "-of", "csv=p=0", str(edit / "cortado.mp4")],
+                             capture_output=True, text=True).stdout.strip()
+    n, d = fps_raw.split("/")
+    durs = segment_durations(edl, edit, round(int(n) / int(d)))
+    srcs = list(edl["sources"].keys())
+    inputs: list[str] = []
+    for k in srcs:
+        inputs += ["-i", edl["sources"][k]]
+    parts, labels = [], []
+    for i, (r, dur) in enumerate(zip(edl["ranges"], durs)):
+        si = srcs.index(r["source"])
+        fo = max(0.0, dur - 0.03)
+        parts.append(f"[{si}:a:0]atrim=start={r['start']:.6f}:duration={dur:.6f},asetpts=PTS-STARTPTS,"
+                     f"aresample=48000,apad=whole_dur={dur:.6f},"
+                     f"afade=t=in:st=0:d=0.03,afade=t=out:st={fo:.6f}:d=0.03[s{i}]")
+        labels.append(f"[s{i}]")
+    graph = ";".join(parts) + ";" + "".join(labels) + f"concat=n={len(labels)}:v=0:a=1[cat]"
+    raw = out_wav.with_suffix(".raw.wav")
+    subprocess.run(["ffmpeg", "-y", *inputs, "-filter_complex", graph, "-map", "[cat]",
+                    "-c:a", "pcm_s16le", str(raw)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    meas = subprocess.run(["ffmpeg", "-i", str(raw), "-af", "loudnorm=I=-14:TP=-1:LRA=11:print_format=json",
+                           "-f", "null", "-"], capture_output=True, text=True).stderr
+    m = json.loads(meas[meas.rindex("{"):meas.rindex("}") + 1])
+    ln = (f"loudnorm=I=-14:TP=-1:LRA=11:measured_I={m['input_i']}:measured_TP={m['input_tp']}:"
+          f"measured_LRA={m['input_lra']}:measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true")
+    subprocess.run(["ffmpeg", "-y", "-i", str(raw), "-af", ln + ",aresample=48000", "-c:a", "pcm_s16le", str(out_wav)],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    raw.unlink(missing_ok=True)
+
+
 def duration(p: Path) -> float:
     return float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
                                  "-of", "csv=p=0", str(p)], capture_output=True, text=True).stdout)
@@ -55,7 +96,7 @@ def main() -> None:
         env["HYPERFRAMES_BROWSER_PATH"] = hs
 
     if not args.skip_check:
-        r = subprocess.run([str(HF_BIN), "check"], cwd=hf, env=env, capture_output=True, text=True)
+        r = subprocess.run([str(HF_BIN), "check", "--safe-zone", "reels"], cwd=hf, env=env, capture_output=True, text=True)
         tail = "\n".join((r.stdout + r.stderr).splitlines()[-25:])
         if r.returncode != 0 or "Check passed" not in r.stdout + r.stderr:
             print(tail)
@@ -70,11 +111,19 @@ def main() -> None:
     if r.returncode != 0 or not raw.exists():
         sys.exit("render falhou")
 
-    # áudio do video-use por cima do vídeo do HyperFrames
-    subprocess.run(["ffmpeg", "-y", "-i", str(raw), "-i", str(audio_src), "-map", "0:v:0", "-map", "1:a:0",
-                    "-c:v", "copy", "-c:a", "copy", "-shortest", "-movflags", "+faststart", str(out)],
+    # áudio: remontado da fonte com precisão de amostra (fallback: o do corte do video-use)
+    wav = edit / "audio_final.wav"
+    try:
+        build_exact_audio(edit, wav)
+        a_in, a_codec = str(wav), ["-c:a", "aac", "-b:a", "192k"]
+    except Exception as e:  # noqa: BLE001
+        print(f"  aviso: áudio exato falhou ({e}); usando o áudio do cortado.mp4")
+        a_in, a_codec = str(audio_src), ["-c:a", "copy"]
+    subprocess.run(["ffmpeg", "-y", "-i", str(raw), "-i", a_in, "-map", "0:v:0", "-map", "1:a:0",
+                    "-c:v", "copy", *a_codec, "-shortest", "-movflags", "+faststart", str(out)],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     raw.unlink(missing_ok=True)
+    wav.unlink(missing_ok=True)
 
     d_out, d_cut = duration(out), duration(audio_src)
     loud = subprocess.run(["ffmpeg", "-i", str(out), "-af", "ebur128=peak=true", "-f", "null", "-"],

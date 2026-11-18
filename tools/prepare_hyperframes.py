@@ -30,22 +30,38 @@ TEMPLATES = ROOT / "templates" / "hyperframes"
 def probe(video: Path) -> dict:
     out = subprocess.run(
         ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
-         "stream=width,height,r_frame_rate:format=duration", "-of", "json", str(video)],
+         "stream=width,height,r_frame_rate,duration:format=duration", "-of", "json", str(video)],
         capture_output=True, text=True, check=True,
     )
     d = json.loads(out.stdout)
     st = d["streams"][0]
     num, den = st["r_frame_rate"].split("/")
     return {"w": st["width"], "h": st["height"], "fps": round(int(num) / int(den)),
-            "dur": float(d["format"]["duration"])}
+            # duração do VÍDEO (o áudio AAC pode passar alguns ms; o root não pode passar do vídeo)
+            "dur": float(st.get("duration") or d["format"]["duration"])}
 
 
-def remap_words(edl: dict, edit_dir: Path) -> list[dict]:
+def segment_durations(edl: dict, edit_dir: Path, fps: int) -> list[float]:
+    """Duração REAL de cada segmento no corte. O render.py arredonda cada segmento para
+    cima até um frame inteiro; usar o comprimento do EDL acumula erro de até 1 frame por corte."""
+    import math
+    segs = sorted((edit_dir / "clips_graded").glob("seg_*.mp4"))
+    if len(segs) == len(edl["ranges"]):
+        out = []
+        for f in segs:
+            r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                                "stream=duration", "-of", "csv=p=0", str(f)], capture_output=True, text=True)
+            out.append(float(r.stdout.strip()))
+        return out
+    return [math.ceil(round((r["end"] - r["start"]) * fps, 6)) / fps for r in edl["ranges"]]
+
+
+def remap_words(edl: dict, edit_dir: Path, seg_durs: list[float]) -> list[dict]:
     """Palavras da fonte → timeline de saída: t_out = t_src - range.start + offset."""
     cache: dict[str, list[dict]] = {}
     out: list[dict] = []
     offset = 0.0
-    for r in edl["ranges"]:
+    for r, seg_dur in zip(edl["ranges"], seg_durs):
         src = r["source"]
         if src not in cache:
             tj = edit_dir / "transcripts" / f"{src}.json"
@@ -58,7 +74,7 @@ def remap_words(edl: dict, edit_dir: Path) -> list[dict]:
             e = min(w["end"], b) - a + offset
             out.append({"id": f"w{len(out)}", "text": w["text"].strip(),
                         "start": round(s, 3), "end": round(e, 3)})
-        offset += b - a
+        offset += seg_dur
     return out
 
 
@@ -90,7 +106,7 @@ INDEX_TEMPLATE = """<!doctype html>
   </head>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="{dur}"
-         data-width="{w}" data-height="{h}">
+         data-width="{w}" data-height="{h}" data-fps="{fps}">
       <!-- Vídeo cortado pelo video-use. Áudio vem daqui. -->
       <video id="base" class="clip" src="assets/video.mp4" data-start="0" data-duration="{dur}"
              data-track-index="0" data-has-audio="true" playsinline></video>
@@ -141,15 +157,19 @@ def main() -> None:
         check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
 
-    words = remap_words(edl, edit_dir)
+    words = remap_words(edl, edit_dir, segment_durations(edl, edit_dir, info["fps"]))
     (hf / "assets" / "words.json").write_text(json.dumps(words, indent=1, ensure_ascii=False))
     lines = [f"# Transcrição na timeline do vídeo cortado ({info['dur']:.2f}s)", ""]
     lines += [f"[{s:06.2f}-{e:06.2f}] {t}" for s, e, t in phrases(words)]
     (hf / "transcricao_saida.md").write_text("\n".join(lines) + "\n")
 
     dur = round(info["dur"], 3)
+    # o render usa a taxa da fonte (sem isso o HyperFrames renderiza a 30 e repete frames de 24 fps)
+    idx = hf / "index.html"
+    if idx.exists() and not args.force and "data-fps=" not in idx.read_text():
+        idx.write_text(idx.read_text().replace('data-composition-id="main"', f'data-composition-id="main" data-fps="{info["fps"]}"', 1))
     if args.force or not (hf / "index.html").exists():
-        (hf / "index.html").write_text(INDEX_TEMPLATE.format(w=info["w"], h=info["h"], dur=dur))
+        (hf / "index.html").write_text(INDEX_TEMPLATE.format(w=info["w"], h=info["h"], dur=dur, fps=info["fps"]))
     if TEMPLATES.exists():
         dst = hf / "modelos"
         shutil.copytree(TEMPLATES, dst, dirs_exist_ok=True)
