@@ -110,6 +110,7 @@ caracteres. Reels: `check --safe-zone reels` (a área do TikTok é mais estreita
 Estilo "Reels de autoridade" (referência da cliente em videos/reels-01/referencia):
 ```bash
 python tools/make_titles.py $H titulos.json --accent "#5CE1E6"   # PALAVRA neon + manuscrito; "fim"
+python tools/make_titles.py $H titulos.json --accent "#0B0B0B" --glow-color "#FFFFFF" --glow 1.1  # "preto neon"
 node_modules/.bin/hyperframes remove-background $P/edit/cortado.mp4 -o $P/edit/recorte/pessoa.webm --quality best
 ```
 Sobre a pessoa, NUNCA manuscrito no rosto: meça o topo da cabeça no alpha do recorte e use
@@ -140,6 +141,11 @@ python tools/render_final.py $P/edit --so-audio             # troca só o áudio
 Ruído: cadeia passa-altas → RNNoise (`models/sh.rnnn`) → perfil estacionário. Medir pausas vs
 fala antes/depois; nunca o modo adaptativo do noisereduce (afina a voz). Música: MusicGen local
 (sem direitos autorais), normalizada 18 dB abaixo da voz (`--musica-db`) + ducking na fala.
+Música "empolgante" (reels-02, aprovada a pedido): prompt "energetic motivational pop edm, punchy drums,
+driving bass, bright synth lead, 124 bpm, no vocals" com `render_final.py --so-audio --musica-db 10 --ducking-db 4`.
+MusicGen precisa de `pip install torch transformers accelerate scipy` (PyPI; o índice do pytorch.org é bloqueado).
+B-roll pedido pela cliente ("camada" de vídeo na palavra falada): `<div class="broll" style="z-index:56">` com
+`<video class="clip" data-start data-duration data-media-start muted>` no index.html; zoom de entrada no wrapper.
 Lembrar a usuária: música do próprio Instagram (biblioteca do app) também é opção.
 
 Render final (HyperFrames + áudio original do video-use, -14 LUFS):

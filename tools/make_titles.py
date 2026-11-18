@@ -18,6 +18,7 @@ Spec JSON (lista):
 
 Uso:
     python tools/make_titles.py <hf_dir> spec.json --accent "#5CE1E6"
+    python tools/make_titles.py <hf_dir> spec.json --accent "#0B0B0B" --glow-color "#FFFFFF"   # preto neon
 Precisa de assets/fonts/montserrat-900-normal.woff2, montserrat-900-italic.woff2,
 montserrat-800-normal.woff2 e yellowtail.woff2 no projeto.
 """
@@ -40,6 +41,9 @@ FONTS = """
     @font-face { font-family: "MontserratT"; font-weight: 800; font-style: normal; src: url("assets/fonts/montserrat-800-normal.woff2") format("woff2"); }
     @font-face { font-family: "Yellowtail"; font-weight: 400; src: url("assets/fonts/yellowtail.woff2") format("woff2"); }
 """
+
+
+GLOW_COLOR = ""  # --glow-color; vazio = mesma cor da letra
 
 
 def rgba(hex_color: str, a: float) -> str:
@@ -75,8 +79,9 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
         s_pos = f"left: {int(W * 0.14)}px; top: {-int(s_size * 1.02)}px;"
     else:
         s_pos = f"right: {int(W * 0.08)}px; top: {int(size * 0.80)}px;"
-    shadow = (f"0 0 {int(10 * glow)}px {rgba(accent, .95)}, 0 0 {int(26 * glow)}px {rgba(accent, .7)}, "
-              f"0 0 {int(60 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.35)")
+    gc = GLOW_COLOR or accent
+    shadow = (f"0 0 {int(10 * glow)}px {rgba(gc, .95)}, 0 0 {int(26 * glow)}px {rgba(gc, .7)}, "
+              f"0 0 {int(60 * glow)}px {rgba(gc, .45)}, 0 4px 14px rgba(0,0,0,.35)")
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; height: {box_h}px; overflow: visible; }}
     #{tid}-big {{ position: absolute; left: 0; top: 0; width: {W}px; text-align: center; white-space: nowrap;
@@ -119,7 +124,8 @@ def fim(spec: dict, W: int, H: int, accent: str, glow: float):
     big_size = fit_size(big, int(W * 0.80), spec.get("size", 150), 0.78)
     top = int(cy - (line_size + big_size) / 2)
     wl = " ".join(f'<span class="w" id="{tid}-w{i}">{html.escape(t)}</span>' for i, (t, _) in enumerate(words))
-    shadow = f"0 0 {int(12 * glow)}px {rgba(accent, .8)}, 0 0 {int(34 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.4)"
+    gc = GLOW_COLOR or accent
+    shadow = f"0 0 {int(12 * glow)}px {rgba(gc, .8)}, 0 0 {int(34 * glow)}px {rgba(gc, .45)}, 0 4px 14px rgba(0,0,0,.4)"
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; text-align: center; overflow: visible; }}
     #{tid}-line {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 800; font-size: {line_size}px;
@@ -144,7 +150,11 @@ def main() -> None:
     ap.add_argument("spec", type=Path)
     ap.add_argument("--accent", default="#5CE1E6")
     ap.add_argument("--glow", type=float, default=1.0, help="intensidade do brilho neon (1 = padrão)")
+    ap.add_argument("--glow-color", default="", help="cor do brilho (padrão: a do --accent). "
+                    "Preto neon: --accent \"#0B0B0B\" --glow-color \"#FFFFFF\"")
     args = ap.parse_args()
+    global GLOW_COLOR
+    GLOW_COLOR = args.glow_color
 
     hf = args.hf_dir.resolve()
     page = (hf / "index.html").read_text()
