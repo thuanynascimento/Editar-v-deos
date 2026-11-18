@@ -83,26 +83,70 @@ def find_music(edit: Path) -> Path | None:
     return None
 
 
+def _lufs(wav: Path) -> float:
+    r = subprocess.run(["ffmpeg", "-i", str(wav), "-af", "ebur128", "-f", "null", "-"], capture_output=True, text=True).stderr
+    return float(re.findall(r"I:\s+(-?[\d.]+) LUFS", r)[-1])
+
+
 def mix_music(voice_wav: Path, music: Path, out_wav: Path, gap_db: float, duck_db: float) -> None:
-    """Mistura música de fundo sob a voz (já em -14 LUFS).
-    - música normalizada para (-14 - gap_db) LUFS: fica "atrás" da voz o tempo todo
-    - ducking por sidechain: abaixa mais ~duck_db enquanto há fala, volta nas pausas
-    - fade-in 0.6 s, fade-out 1.2 s no fim; repete a faixa se for mais curta que o vídeo
-    - limitador final em -1 dBTP"""
-    dur = duration(voice_wav)
-    target = -14 - gap_db
-    ratio = max(1.5, min(20.0, 1 + duck_db / 3))
-    graph = (
-        f"[1:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{dur:.6f},asetpts=PTS-STARTPTS,"
-        f"loudnorm=I={target}:TP=-6:LRA=11,aresample=48000,"
-        f"afade=t=in:st=0:d=0.6,afade=t=out:st={max(0, dur - 1.2):.3f}:d=1.2[m];"
-        f"[0:a]aformat=channel_layouts=stereo,asplit=2[v][key];"
-        f"[m][key]sidechaincompress=threshold=0.02:ratio={ratio:.1f}:attack=40:release=450:makeup=1[md];"
-        f"[v][md]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.84:level=false[out]"
-    )
-    subprocess.run(["ffmpeg", "-y", "-i", str(voice_wav), "-stream_loop", "-1", "-i", str(music),
-                    "-filter_complex", graph, "-map", "[out]", "-c:a", "pcm_s16le", str(out_wav)],
-                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    """Mistura música de fundo sob a voz (já em -14 LUFS), de forma determinística e medida.
+    - música ajustada para ficar gap_db abaixo da voz (loudness integrado) quando NÃO há fala
+    - enquanto há fala, abaixa mais duck_db (envelope da voz: ataque 60 ms, soltura 400 ms)
+    - fade-in 0.6 s, fade-out 1.2 s; repete a faixa se for mais curta que o vídeo
+    - sem limitador com lookahead (atrasaria o áudio ~5 ms); se o pico passar de -1 dBFS,
+      a mistura inteira desce o necessário — a sincronia fica exata"""
+    import numpy as np
+    sr = 48000
+
+    def load(p: Path) -> np.ndarray:
+        b = subprocess.run(["ffmpeg", "-v", "error", "-i", str(p), "-ac", "2", "-ar", str(sr), "-f", "f32le", "-"],
+                           capture_output=True, check=True).stdout
+        return np.frombuffer(b, np.float32).reshape(-1, 2).copy()
+
+    v = load(voice_wav)
+    m = load(music)
+    n = len(v)
+    if len(m) < n:
+        m = np.concatenate([m] * (n // len(m) + 1))
+    m = m[:n]
+
+    # nível: música (sozinha) gap_db abaixo da voz, em LUFS
+    tmp = out_wav.with_suffix(".m.wav")
+    _write(tmp, m, sr)
+    gain_db = (_lufs(voice_wav) - gap_db) - _lufs(tmp)
+    tmp.unlink(missing_ok=True)
+    m *= 10 ** (gain_db / 20)
+
+    # envelope da voz → ganho de ducking suave
+    hop = sr // 100  # 10 ms
+    mono = np.abs(v).mean(axis=1)
+    frames = np.sqrt(np.add.reduceat(mono ** 2, np.arange(0, n, hop)) / hop)
+    edb = 20 * np.log10(frames + 1e-9)
+    speech = np.clip((edb + 45) / 10, 0, 1)  # 0 abaixo de -45 dB, 1 acima de -35 dB
+    g = np.empty_like(speech)
+    att, rel = 1 - np.exp(-1 / 6), 1 - np.exp(-1 / 40)  # 60 ms / 400 ms
+    acc = 0.0
+    for i, t in enumerate(speech):
+        acc += (t - acc) * (att if t > acc else rel)
+        g[i] = acc
+    duck = 10 ** (-duck_db * np.repeat(g, hop)[:n] / 20)
+    fade = np.ones(n, np.float32)
+    fi, fo = int(0.6 * sr), int(1.2 * sr)
+    fade[:fi] = np.linspace(0, 1, fi)
+    fade[-fo:] = np.minimum(fade[-fo:], np.linspace(1, 0, fo))
+    mix = v + m * (duck * fade)[:, None]
+    peak = np.abs(mix).max()
+    if peak > 0.89:
+        mix *= 0.89 / peak
+    _write(out_wav, mix, sr)
+
+
+def _write(p: Path, x, sr: int) -> None:
+    import numpy as np
+    import wave
+    y = (np.clip(x, -1, 1) * 32767).astype(np.int16)
+    with wave.open(str(p), "wb") as w:
+        w.setnchannels(y.shape[1]); w.setsampwidth(2); w.setframerate(sr); w.writeframes(y.tobytes())
 
 
 def duration(p: Path) -> float:
@@ -116,8 +160,8 @@ def main() -> None:
     ap.add_argument("--quality", default="looks", choices=["draft", "looks", "delivery"])
     ap.add_argument("-o", "--output", type=Path, default=None)
     ap.add_argument("--skip-check", action="store_true")
-    ap.add_argument("--musica-db", type=float, default=18.0,
-                    help="quanto a música fica abaixo da voz, em dB (padrão 18; menor = música mais alta)")
+    ap.add_argument("--musica-db", type=float, default=14.0,
+                    help="quanto a música fica abaixo da voz nas pausas, em dB (padrão 14; menor = música mais alta)")
     ap.add_argument("--ducking-db", type=float, default=6.0, help="quanto a música abaixa a mais durante a fala")
     ap.add_argument("--sem-musica", action="store_true")
     ap.add_argument("--so-audio", action="store_true",

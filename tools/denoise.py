@@ -97,6 +97,44 @@ def main() -> None:
         y = x
         print("sem trecho de ruído (--ruido): só passa-altas + RNNoise")
 
+    # RNNoise atrasa o sinal (~5 ms). Mede o atraso contra a fonte e compensa: a timeline do
+    # áudio limpo tem que bater amostra a amostra com o vídeo.
+    ref = subprocess.run(["ffmpeg", "-v", "error", "-i", str(video), "-map", "0:a:0", "-vn", "-ac", "1",
+                          "-ar", str(sr), "-f", "f32le", "-"], capture_output=True, check=True).stdout
+    ref = np.frombuffer(ref, np.float32)
+    mono = y.mean(axis=0)
+    # mede no trecho de 2 s com mais energia (fala): é onde o sincronismo com a boca importa;
+    # a correlação do arquivo inteiro é puxada pelos graves, que o passa-altas defasa de outro jeito
+    win = 2 * sr
+    starts = range(0, max(1, min(len(ref), len(mono)) - win - 2000), sr // 2)
+    s0 = max(starts, key=lambda i: float(np.sum(ref[i:i + win] ** 2))) + 1000
+    # GCC-PHAT: correlação "branqueada". A voz é periódica (pitch) e a correlação comum tem
+    # vários picos quase iguais a cada período; o PHAT deixa um pico único e estreito no atraso real.
+    a_, b_ = ref[s0:s0 + win], mono[s0:s0 + win]
+    nfft = 1 << (2 * win - 1).bit_length()
+    R = np.fft.rfft(b_, nfft) * np.conj(np.fft.rfft(a_, nfft))
+    xc = np.fft.irfft(R / (np.abs(R) + 1e-12), nfft)
+    lag = int(np.argmax(np.concatenate([xc[-1000:], xc[:1000]]))) - 1000
+    if lag:
+        y = np.concatenate([y[:, lag:], np.zeros((y.shape[0], lag), y.dtype)], axis=1) if lag > 0 else \
+            np.concatenate([np.zeros((y.shape[0], -lag), y.dtype), y[:, :lag]], axis=1)
+        print(f"atraso compensado: {lag} amostras ({lag / sr * 1000:.1f} ms)")
+    # Celular grava o áudio começando alguns ms depois do vídeo (start_time do stream; no iPhone
+    # do reels-01: 5.2 ms). Extrair para wav descarta esse deslocamento — recoloca aqui para o
+    # áudio limpo ficar na timeline do VÍDEO, como o render.py lê a fonte.
+    def start(sel: str) -> float:
+        r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", sel, "-show_entries",
+                            "stream=start_time", "-of", "csv=p=0", str(video)], capture_output=True, text=True)
+        try:
+            return float(r.stdout.split()[0])
+        except (ValueError, IndexError):
+            return 0.0
+    off = int(round((start("a:0") - start("v:0")) * sr))
+    if off > 0:
+        y = np.concatenate([np.zeros((y.shape[0], off), y.dtype), y], axis=1)
+        print(f"áudio começa {off / sr * 1000:.1f} ms depois do vídeo na fonte: deslocamento mantido")
+    elif off < 0:
+        y = y[:, -off:]
     write_wav(out, y.astype(np.float32), sr)
     raw.unlink(missing_ok=True)
     print(f"→ {out}")
