@@ -141,6 +141,26 @@ def mix_music(voice_wav: Path, music: Path, out_wav: Path, gap_db: float, duck_d
     _write(out_wav, mix, sr)
 
 
+def add_sfx(wav: Path, sfx: Path) -> None:
+    """Soma edit/sfx.wav (mesma timeline do corte, nível já definido por make_sfx.py) à mistura."""
+    import numpy as np
+    sr = 48000
+
+    def load(p: Path) -> np.ndarray:
+        b = subprocess.run(["ffmpeg", "-v", "error", "-i", str(p), "-ac", "2", "-ar", str(sr), "-f", "f32le", "-"],
+                           capture_output=True, check=True).stdout
+        return np.frombuffer(b, np.float32).reshape(-1, 2).copy()
+
+    v, s = load(wav), load(sfx)
+    n = len(v)
+    s = np.pad(s, ((0, max(0, n - len(s))), (0, 0)))[:n]
+    mix = v + s
+    peak = np.abs(mix).max()
+    if peak > 0.89:
+        mix *= 0.89 / peak
+    _write(wav, mix, sr)
+
+
 def _write(p: Path, x, sr: int) -> None:
     import numpy as np
     import wave
@@ -211,6 +231,9 @@ def main() -> None:
             mixed = edit / "audio_mix.wav"
             mix_music(wav, music, mixed, args.musica_db, args.ducking_db)
             mixed.replace(wav)
+        if (edit / "sfx.wav").exists():
+            print("  efeitos sonoros: sfx.wav")
+            add_sfx(wav, edit / "sfx.wav")
         a_in, a_codec = str(wav), ["-c:a", "aac", "-b:a", "192k"]
     except Exception as e:  # noqa: BLE001
         print(f"  aviso: áudio exato falhou ({e}); usando o áudio do cortado.mp4")

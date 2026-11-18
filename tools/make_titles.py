@@ -15,6 +15,7 @@ Spec JSON (lista):
     "line": [["qual", 16.02], ["imóvel", 16.18], ["você", 16.61], ["gostaria", 16.89], ["de", 17.23]],
     "big": "CONQUISTAR?", "big_at": 17.41}]
   y = centro vertical em % da altura. Tempos na timeline do vídeo cortado.
+  "fim": "width" (% da tela, padrão 72 = margem de segurança) e "breaks" (palavras que abrem linha).
 
 Uso:
     python tools/make_titles.py <hf_dir> spec.json --accent "#5CE1E6"
@@ -114,14 +115,21 @@ def fim(spec: dict, W: int, H: int, accent: str, glow: float):
     tid, s, e = spec["id"], spec["start"], spec["end"]
     cy = H * spec.get("y", 58) / 100
     words = spec.get("line", [])
-    line_size = spec.get("line_size", 64)
+    line_size = spec.get("line_size", 54)
+    # margem de segurança: caixa com "width" % da tela (padrão 72), centralizada — não encosta nas
+    # bordas nem na coluna de botões do Reels; "breaks" = palavras que começam linha nova
+    box_w = int(W * spec.get("width", 72) / 100)
+    box_l = (W - box_w) // 2
+    breaks = {b.lower() for b in spec.get("breaks", [])}
     big = spec["big"]
-    big_size = fit_size(big, int(W * 0.80), spec.get("size", 150), 0.78)
-    top = int(cy - (line_size + big_size) / 2)
-    wl = " ".join(f'<span class="w" id="{tid}-w{i}">{html.escape(t)}</span>' for i, (t, _) in enumerate(words))
+    big_size = fit_size(big, int(box_w * 0.96), spec.get("size", 140), 0.78)
+    rows = 1 + sum(1 for t, _ in words[1:] if t.lower() in breaks)
+    top = int(cy - (rows * line_size * 1.1 + big_size) / 2)
+    wl = " ".join((("<br>" if i and t.lower() in breaks else "") + f'<span class="w" id="{tid}-w{i}">{html.escape(t)}</span>')
+                  for i, (t, _) in enumerate(words))
     shadow = f"0 0 {int(12 * glow)}px {rgba(accent, .8)}, 0 0 {int(34 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.4)"
     css = f"""
-    #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; text-align: center; overflow: visible; }}
+    #{tid}-box {{ position: absolute; left: {box_l}px; top: {top}px; width: {box_w}px; text-align: center; overflow: visible; }}
     #{tid}-line {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 800; font-size: {line_size}px;
       color: #fff; line-height: 1.1; text-shadow: 0 3px 16px rgba(0,0,0,.45); }}
     #{tid}-line .w {{ display: inline-block; }}

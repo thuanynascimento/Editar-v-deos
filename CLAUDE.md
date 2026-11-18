@@ -136,7 +136,11 @@ python tools/denoise.py $P/bruto.mov --ruido 1.5-3.9        # trecho SÓ de ruí
 python tools/gerar_musica.py $P/edit --duracao 20 --opcao leve "warm acoustic ..., no vocals"
 python tools/gerar_musica.py $P/edit --escolher leve         # vira edit/musica.wav
 python tools/render_final.py $P/edit --so-audio             # troca só o áudio (sem re-render do vídeo)
+python tools/make_sfx.py $P/edit --tique 8.6-11.6 --passo 0.25 --db -20   # tique-taque → edit/sfx.wav
 ```
+Efeitos sonoros: `edit/sfx.wav` (timeline do corte) é somado automaticamente no render_final. Animação
+com som (ex.: cronômetro em "o tempo passa"): o ponteiro pula nos mesmos tempos dos toques.
+Pergunta final ("fim"): `"width": 72` e `"breaks"` para não ocupar a largura toda (margem de segurança).
 Ruído: cadeia passa-altas → RNNoise (`models/sh.rnnn`) → perfil estacionário. Medir pausas vs
 fala antes/depois; nunca o modo adaptativo do noisereduce (afina a voz). Música: MusicGen local
 (sem direitos autorais), normalizada 18 dB abaixo da voz (`--musica-db`) + ducking na fala.
@@ -174,4 +178,5 @@ registrar aqui.
 | `denoise.py` | 1½ | Redução de ruído de fundo (RNNoise + perfil) → audio_limpo.wav |
 | `gerar_musica.py` | 2 | Música de fundo instrumental gerada localmente (MusicGen) |
 | `make_titles.py` | 2 | Títulos de palavra-chave neon (atrás da pessoa) + manuscrito + encerramento |
+| `make_sfx.py` | 2 | Efeitos sonoros sintetizados (tique-taque de relógio) → sfx.wav |
 | `render_final.py` | 2 | check → render (chrome-headless-shell) → áudio do video-use → final.mp4 |
