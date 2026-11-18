@@ -1,0 +1,17 @@
+{
+  "name": "editar-videos",
+  "version": "1.0.0",
+  "description": "Edição de vídeo por chat: video-use (cortes) + HyperFrames (animações)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thuanynascimento/Editar-v-deos.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thuanynascimento/Editar-v-deos/issues"
+  },
+  "homepage": "https://github.com/thuanynascimento/Editar-v-deos#readme",
+  "devDependencies": {
+    "hyperframes": "^0.9.65"
+  },
+  "private": true
+}

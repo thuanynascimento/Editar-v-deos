@@ -1,0 +1,40 @@
+<!-- MODELO: número/estatística com contagem animada. Copie para compositions/<id>.html e troque __ID__.
+     Variáveis: value (número final), prefix, suffix, label. Duração sugerida: 4–6 s.
+     Sincronia: comece a cena ~0.9 s antes da palavra do número para a contagem terminar nela. -->
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: transparent; font-family: "Montserrat", sans-serif; }
+    #__ID__-box { position: absolute; right: 120px; top: 50%; width: 620px; margin-top: -230px; height: 460px;
+      background: rgba(12, 13, 18, 0.84); border-radius: 28px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; box-shadow: 0 24px 60px rgba(0,0,0,.5); opacity: 0; }
+    #__ID__-num { color: var(--accent, #FFD43B); font-size: 190px; font-weight: 900; line-height: 1; letter-spacing: -.03em; }
+    #__ID__-label { color: #fff; font-size: 44px; font-weight: 700; margin-top: 18px; text-align: center; max-width: 520px; }
+    #__ID__-bar { width: 0; height: 10px; background: var(--accent, #FFD43B); border-radius: 5px; margin-top: 26px; }
+  </style>
+  <div id="root" data-composition-id="__ID__" data-width="1920" data-height="1080"
+       data-composition-variables='[{"id":"value","type":"number","label":"Valor","default":50},{"id":"prefix","type":"string","label":"Prefixo","default":"+"},{"id":"suffix","type":"string","label":"Sufixo","default":"%"},{"id":"label","type":"string","label":"Legenda","default":"de crescimento"}]'>
+    <div id="__ID__-box">
+      <div id="__ID__-num">0</div>
+      <div id="__ID__-label" data-var-text="label">de crescimento</div>
+      <div id="__ID__-bar"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const v = Object.assign({ value: 50, prefix: "+", suffix: "%" }, window.__hyperframes?.getVariables?.() || {});
+      const host = document.querySelector('[data-composition-id="__ID__"]').closest('[data-duration]');
+      const D = parseFloat(host?.dataset.duration || 5);
+      const num = document.getElementById("__ID__-num");
+      const counter = { n: 0 };
+      const draw = () => { num.textContent = v.prefix + Math.round(counter.n) + v.suffix; };
+      draw();
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#__ID__-box", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.6)" }, 0)
+        .fromTo(counter, { n: 0 }, { n: Number(v.value), duration: 0.9, ease: "power3.out", onUpdate: draw }, 0.15)
+        .fromTo("#__ID__-label", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.7)
+        .fromTo("#__ID__-bar", { width: 0 }, { width: 420, duration: 0.6, ease: "power3.inOut" }, 0.8)
+        .to("#__ID__-box", { opacity: 0, scale: 0.92, duration: 0.35, ease: "power2.in" }, Math.max(1.8, D - 0.45));
+      window.__timelines["__ID__"] = tl;
+    })();
+  </script>
+</template>

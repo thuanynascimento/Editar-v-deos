@@ -1,0 +1,8 @@
+# video-use helpers
+requests
+librosa
+matplotlib
+pillow
+numpy
+# transcrição local (sem API key)
+faster-whisper

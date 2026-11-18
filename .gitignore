@@ -1,0 +1,8 @@
+node_modules/
+.env
+__pycache__/
+*.pyc
+# vídeos e saídas ficam fora do git (pesados)
+videos/*
+!videos/.gitkeep
+.hyperframes/

@@ -1,0 +1,34 @@
+<!-- MODELO: chamada para ação (botão "Inscreva-se" com clique). Troque __ID__.
+     Variáveis: text. Duração sugerida: 2.5–4 s. -->
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: transparent; font-family: "Montserrat", sans-serif; }
+    #__ID__-btn { position: absolute; left: 50%; bottom: 150px; width: 640px; margin-left: -320px; height: 130px;
+      border-radius: 65px; background: #E62117; color: #fff; display: flex; align-items: center; justify-content: center;
+      gap: 22px; font-size: 52px; font-weight: 900; letter-spacing: .02em; box-shadow: 0 18px 50px rgba(0,0,0,.45); opacity: 0; }
+    #__ID__-bell { width: 54px; height: 54px; }
+    #__ID__-cursor { position: absolute; left: 1120px; bottom: 60px; width: 70px; height: 70px; opacity: 0; }
+  </style>
+  <div id="root" data-composition-id="__ID__" data-width="1920" data-height="1080"
+       data-composition-variables='[{"id":"text","type":"string","label":"Texto","default":"INSCREVA-SE"}]'>
+    <div id="__ID__-btn">
+      <svg id="__ID__-bell" viewBox="0 0 24 24" fill="#fff"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.84V3a1.5 1.5 0 0 0-3 0v1.16A7 7 0 0 0 5 11v5l-2 2v1h18v-1z"/></svg>
+      <span id="__ID__-text" data-var-text="text">INSCREVA-SE</span>
+    </div>
+    <svg id="__ID__-cursor" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2 4 8-3 1.5-4-8-6 5z" fill="#fff" stroke="#000" stroke-width="1.2"/></svg>
+  </div>
+  <script>
+    (function () {
+      const host = document.querySelector('[data-composition-id="__ID__"]').closest('[data-duration]');
+      const D = parseFloat(host?.dataset.duration || 3);
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#__ID__-btn", { opacity: 0, y: 80, scale: 0.8 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.8)" }, 0)
+        .fromTo("#__ID__-cursor", { opacity: 0, x: 220, y: 120 }, { opacity: 1, x: 0, y: 0, duration: 0.6, ease: "power3.out" }, 0.45)
+        .fromTo("#__ID__-btn", { scale: 1 }, { scale: 0.92, duration: 0.09, ease: "power1.in", yoyo: true, repeat: 1, immediateRender: false }, 1.1)
+        .fromTo("#__ID__-btn", { backgroundColor: "#E62117" }, { backgroundColor: "#606060", duration: 0.15, immediateRender: false }, 1.2)
+        .fromTo("#__ID__-bell", { rotation: 0 }, { rotation: 18, duration: 0.08, yoyo: true, repeat: 5, ease: "sine.inOut" }, 1.3)
+        .to(["#__ID__-btn", "#__ID__-cursor"], { opacity: 0, duration: 0.3, ease: "power2.in" }, Math.max(1.9, D - 0.4));
+      window.__timelines["__ID__"] = tl;
+    })();
+  </script>
+</template>
