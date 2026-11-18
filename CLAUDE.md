@@ -120,6 +120,9 @@ Cliente da reels-02 NÃO quer palavra nenhuma encostando na cabeça: meça o con
 (alpha do recorte, pior caso de todo o vídeo, por coluna) e deixe a caixa do título ≥ 20 px acima;
 manuscrito ao lado do rosto com `"script_max_w"`. Títulos em preto com brilho: `make_titles.py
 --fill "#0A0A0A" --script-color "#0A0A0A"` (sobre roupa preta, aumente `--glow`).
+**Cliente da reels-02: NADA de verde neon (nem cor nenhuma) — só branco ou preto** em títulos,
+legendas, destaques e molduras: títulos pretos com `--accent "#FFFFFF"` (halo branco), texto sobre
+roupa escura em branco, destaques da legenda `--accent "#FFFFFF"` (só o peso muda).
 
 Estilo "Reels de autoridade" (referência da cliente em videos/reels-01/referencia):
 ```bash
