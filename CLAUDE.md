@@ -103,7 +103,7 @@ Legendas (sempre por cima das animações):
 python tools/make_captions.py $H --emphasis "palavra,expressão de ênfase" --accent "#5CE1E6" --y 58 \
     --break "do que,uma renda"     # quebra antes de expressões, para cada linha ser uma ideia
 ```
-Padrão: Montserrat branca sem contorno (sombra suave), centralizada, `--y` = centro vertical em %
+Estilo Reels de autoridade: `--uppercase --blur --weight 800 --size 50 --max-words 2`. Padrão: Montserrat branca sem contorno (sombra suave), centralizada, `--y` = centro vertical em %
 da altura, `--width 72–78` para não invadir os botões do Reels. Grupos de até 4 palavras/22
 caracteres. Reels: `check --safe-zone reels` (a área do TikTok é mais estreita à direita).
 
