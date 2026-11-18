@@ -70,6 +70,12 @@ def remap_words(edl: dict, edit_dir: Path, seg_durs: list[float]) -> list[dict]:
         for w in cache[src]:
             if w["end"] <= a or w["start"] >= b:
                 continue
+            # o Whisper estica as bordas das palavras: uma palavra que encosta em DOIS trechos
+            # entra só naquele em que mais aparece — evita "e e", "falo falo" nas emendas
+            ov = min(w["end"], b) - max(w["start"], a)
+            if any(min(w["end"], r2["end"]) - max(w["start"], r2["start"]) > ov
+                   for r2 in edl["ranges"] if r2 is not r and r2["source"] == src):
+                continue
             s = max(w["start"], a) - a + offset
             e = min(w["end"], b) - a + offset
             out.append({"id": f"w{len(out)}", "text": w["text"].strip(),

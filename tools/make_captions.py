@@ -93,6 +93,12 @@ def main() -> None:
     ap.add_argument("--max-chars", type=int, default=20)
     ap.add_argument("--pause", type=float, default=0.18, help="pausa que quebra o grupo (s)")
     ap.add_argument("--uppercase", action="store_true")
+    ap.add_argument("--lowercase", action="store_true", help="tudo em minúsculas (folha do Paulo)")
+    ap.add_argument("--grupos", type=Path, default=None,
+                    help="arquivo com um grupo de legenda por linha (texto igual à fala); substitui a quebra automática")
+    ap.add_argument("--acumular", action="store_true",
+                    help="a frase se monta palavra por palavra, no tempo da fala (folha do Paulo)")
+    ap.add_argument("--sem-ponto", action="store_true", help="tira ponto final, vírgula e reticências; mantém ? e !")
     ap.add_argument("--no-shadow", action="store_true", help="tira até a sombra suave")
     ap.add_argument("--lead", type=float, default=0.08, help="legenda aparece X s antes da 1ª palavra")
     args = ap.parse_args()
@@ -103,12 +109,30 @@ def main() -> None:
     W, H = (int(x) for x in re.search(r'data-width="(\d+)" data-height="(\d+)"', page).groups())
     root_dur = float(re.search(r'data-composition-id="main" data-start="0" data-duration="([\d.]+)"', page).group(1))
     words = [w for w in json.loads((hf / "assets" / "words.json").read_text()) if w["text"].strip()]
+    if args.sem_ponto:
+        for w in words:
+            w["text"] = re.sub(r"(\.\.\.|…|[.,;:])+$", "", w["text"].strip()) or w["text"]
 
     emph = mark_emphasis(words, args.emphasis.split(","))
     for w, e in zip(words, emph):
         w["emph"] = e
     breaks = [[norm(t) for t in b.split()] for b in args.breaks.split(",") if b.strip()]
-    groups = group_words(words, args.max_words, args.max_chars, args.pause, breaks)
+    if args.grupos:
+        groups, i = [], 0
+        for line in args.grupos.read_text().splitlines():
+            toks = [norm(x) for x in line.split() if norm(x)]
+            if not toks:
+                continue
+            g = words[i:i + len(toks)]
+            got = [norm(w["text"]) for w in g]
+            if got != toks:
+                sys.exit(f"--grupos: esperava {toks} e achei {got} (palavra {i})")
+            groups.append(g)
+            i += len(toks)
+        if i != len(words):
+            sys.exit(f"--grupos cobre {i} de {len(words)} palavras; sobrou: {[w['text'] for w in words[i:i + 8]]}")
+    else:
+        groups = group_words(words, args.max_words, args.max_chars, args.pause, breaks)
 
     size = args.size or round(W * 0.068)
     max_w = round(W * args.width / 100)
@@ -127,7 +151,7 @@ def main() -> None:
         spans[gi][0] = round(spans[gi][0], 3)
 
     shadow = "none" if args.no_shadow else "0 3px 22px rgba(0,0,0,.38), 0 1px 3px rgba(0,0,0,.25)"
-    tt = "uppercase" if args.uppercase else "none"
+    tt = "uppercase" if args.uppercase else ("lowercase" if args.lowercase else "none")
     cap_h = round(size * 2.6)
     top = round(H * args.y / 100 - cap_h / 2)
 
@@ -135,11 +159,18 @@ def main() -> None:
     for gi, (g, (s, e)) in enumerate(zip(groups, spans)):
         gid = f"cap-{gi}"
         spans_html = []
-        js.append(f'tl.fromTo("#{gid}-in", {{ opacity: 0, y: 18 }}, {{ opacity: 1, y: 0, duration: 0.16, ease: "power2.out" }}, {s:.3f});')
+        if args.acumular:
+            js.append(f'tl.set("#{gid}-in", {{ opacity: 1 }}, {s:.3f});')
+        else:
+            js.append(f'tl.fromTo("#{gid}-in", {{ opacity: 0, y: 18 }}, {{ opacity: 1, y: 0, duration: 0.16, ease: "power2.out" }}, {s:.3f});')
         for wi, w in enumerate(g):
             cls = "w e" if w["emph"] else "w"
             spans_html.append(f'<span id="{gid}-w{wi}" class="{cls}">{html.escape(w["text"])}</span>')
-            if w["emph"]:
+            if args.acumular:
+                t = max(s, w["start"] - 0.03)
+                js.append(f'tl.fromTo("#{gid}-w{wi}", {{ opacity: 0, y: {round(size * 0.25)} }}, '
+                          f'{{ opacity: 1, y: 0, duration: 0.12, ease: "power2.out" }}, {t:.3f});')
+            elif w["emph"]:
                 t = max(s, w["start"])
                 js.append(f'tl.fromTo("#{gid}-w{wi}", {{ y: 0, scale: 1 }}, {{ y: -10, scale: 1.04, duration: 0.14, ease: "power2.out", '
                           f'yoyo: true, repeat: 1 }}, {t:.3f});')
@@ -158,7 +189,8 @@ def main() -> None:
       font-size: {size}px; font-weight: {args.weight}; line-height: 1.12; color: {args.color};
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
-    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
+    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: {"0" if args.acumular else "0 0.1em"}; }}
+    {".w { opacity: 0; }" if args.acumular else ""}
   </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}

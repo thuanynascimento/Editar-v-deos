@@ -140,6 +140,23 @@ Velocidade: ~3× o tempo do vídeo (vídeo de 1 min ≈ 3 min). Vídeos > 2 min:
 - Pedidos de ajuste ("tira a animação do começo", "corta menos", "muda a cor"): editar
   `edl.json`/`index.html`/templates e re-renderizar só a fase necessária. Nunca re-transcrever.
 
+## Estilo Paulo Rosa Luz (aprovado — folha: https://claude.ai/artifact/QzkuoXoSTmkV4wztmb6TVb)
+
+Vídeos de salão (vertical 1080×1920, conversa enquanto trabalha). Sempre:
+- **Montagem com `tools/montagem.py`** no lugar do `render.py`: nada de corte seco. Mistura de
+  0,15 s entre trechos da fala; troca de ambiente 0,4 s; troca de etapa 0,5 s + zoom 0.04;
+  takes extras (b-roll, sem som) como camadas com fade 0,4 s e aproximação lenta, definidos em
+  `edit/montagem.json`. Reordenar trechos no `edl.json` é permitido (história > cronologia).
+- **Legenda**: `make_captions.py --lowercase --acumular --sem-ponto --weight 800 --emph-weight 800
+  --accent "#D9985F" --y 60 --width 76 --size 58 --grupos hyperframes/grupos.txt`
+  (um grupo por ideia, até 2 linhas; 1 destaque caramelo por frase: termos de cabelo/produto).
+  Fala de cliente: Cormorant Garamond itálico, creme `#F7ECDD` (ainda não automatizado).
+- **Etiqueta do procedimento**: `add_overlay.py $H etiqueta tag-x INI 3 --var "text=Climazon · tratamento térmico"`
+  no começo e a cada troca de etapa (máx. 1 a cada ~10 s).
+- Sem filtro de cor. Música: perguntar (padrão: só voz). Conversa pessoal da cliente nunca entra.
+- Transcrição: o Whisper `small` erra termos (mecha→"mexa"); para os trechos escolhidos, rodar
+  `large-v3` e conferir. Depois do `prepare_hyperframes`, revisar `words.json` (sobras nas emendas).
+
 ## Personalização visual
 
 Templates em `templates/hyperframes/` usam `--accent` (amarelo `#FFD43B`) e fonte Montserrat
@@ -157,4 +174,5 @@ registrar aqui.
 | `make_captions.py` | 2 | Legendas palavra a palavra com ênfase, posição e quebras ajustáveis |
 | `denoise.py` | 1½ | Redução de ruído de fundo (RNNoise + perfil) → audio_limpo.wav |
 | `gerar_musica.py` | 2 | Música de fundo instrumental gerada localmente (MusicGen) |
+| `montagem.py` | 1 | Corte com passagens suaves + camadas de b-roll (edl.json + montagem.json) → cortado.mp4 |
 | `render_final.py` | 2 | check → render (chrome-headless-shell) → áudio do video-use → final.mp4 |
