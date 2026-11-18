@@ -81,6 +81,8 @@ def main() -> None:
     ap.add_argument("--emphasis", default="", help="palavras/expressões de ênfase, separadas por vírgula")
     ap.add_argument("--break", dest="breaks", default="", help="força quebra de grupo antes destas palavras/expressões (ex.: \"do que,uma renda\")")
     ap.add_argument("--accent", default="#FFD43B", help="cor das palavras de ênfase")
+    ap.add_argument("--neon", default="", help='ênfase "neon": letra na cor --accent com contorno e brilho '
+                    'nesta cor (ex.: --accent "#000" --neon "#39FF14" = neon preto)')
     ap.add_argument("--color", default="#FFFFFF", help="cor do texto")
     ap.add_argument("--font", default="Montserrat")
     ap.add_argument("--weight", type=int, default=700)
@@ -168,6 +170,13 @@ def main() -> None:
             if (hf / "assets" / "fonts" / f"montserrat-{wgt}-normal.woff2").exists():
                 font_faces += (f'    @font-face {{ font-family: "Montserrat"; font-weight: {wgt}; '
                                f'src: url("assets/fonts/montserrat-{wgt}-normal.woff2") format("woff2"); }}\n')
+    neon_css = ""
+    if args.neon:
+        h = args.neon.lstrip("#")
+        r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+        neon_css = (f" -webkit-text-stroke: {max(2, size // 22)}px {args.neon}; paint-order: stroke fill;"
+                    f" text-shadow: 0 0 8px rgba({r},{g},{b},.95), 0 0 20px rgba({r},{g},{b},.75),"
+                    f" 0 0 42px rgba({r},{g},{b},.5);")
     comp = f"""<!-- Legendas geradas por tools/make_captions.py — edite o texto direto aqui ou rode o script de novo. -->
 <template>
   <style>
@@ -179,7 +188,7 @@ def main() -> None:
       font-size: {size}px; font-weight: {args.weight}; line-height: 1.12; color: {args.color};
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
-    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
+    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em;{neon_css} }}
   </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}

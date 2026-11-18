@@ -73,15 +73,20 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
     # tela e a cabeça, nunca no rosto), à esquerda do centro para começar a leitura
     if spec.get("script_pos", "below") == "above":
         s_pos = f"left: {int(W * 0.14)}px; top: {-int(s_size * 1.02)}px;"
+    elif spec.get("script_pos") == "left":   # abaixo e à esquerda (cabeça centralizada e alta)
+        s_pos = f"left: {int(W * 0.05)}px; top: {int(size * 0.85)}px;"
     else:
         s_pos = f"right: {int(W * 0.08)}px; top: {int(size * 0.80)}px;"
     shadow = (f"0 0 {int(10 * glow)}px {rgba(accent, .95)}, 0 0 {int(26 * glow)}px {rgba(accent, .7)}, "
               f"0 0 {int(60 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.35)")
+    # "neon preto": letra preta (--fill "#000") com contorno e brilho na cor de destaque
+    stroke = (f" -webkit-text-stroke: {spec['stroke']}px {accent}; paint-order: stroke fill;"
+              if spec.get("stroke") else "")
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; height: {box_h}px; overflow: visible; }}
     #{tid}-big {{ position: absolute; left: 0; top: 0; width: {W}px; text-align: center; white-space: nowrap;
       font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 900; font-size: {size}px;
-      line-height: 1; letter-spacing: -0.01em; color: {accent}; text-shadow: {shadow}; }}
+      line-height: 1; letter-spacing: -0.01em; color: {spec.get("fill") or accent}; text-shadow: {shadow};{stroke} }}
     #{tid}-big .L {{ display: inline-block; }}
     #{tid}-s {{ position: absolute; {s_pos} }}
 """
@@ -120,13 +125,16 @@ def fim(spec: dict, W: int, H: int, accent: str, glow: float):
     top = int(cy - (line_size + big_size) / 2)
     wl = " ".join(f'<span class="w" id="{tid}-w{i}">{html.escape(t)}</span>' for i, (t, _) in enumerate(words))
     shadow = f"0 0 {int(12 * glow)}px {rgba(accent, .8)}, 0 0 {int(34 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.4)"
+    # "neon preto": letra preta (--fill "#000") com contorno e brilho na cor de destaque
+    stroke = (f" -webkit-text-stroke: {spec['stroke']}px {accent}; paint-order: stroke fill;"
+              if spec.get("stroke") else "")
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; text-align: center; overflow: visible; }}
     #{tid}-line {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 800; font-size: {line_size}px;
       color: #fff; line-height: 1.1; text-shadow: 0 3px 16px rgba(0,0,0,.45); }}
     #{tid}-line .w {{ display: inline-block; }}
     #{tid}-big {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 900; font-style: italic;
-      font-size: {big_size}px; line-height: 1.02; color: {accent}; text-shadow: {shadow}; margin-top: 6px; white-space: nowrap; }}
+      font-size: {big_size}px; line-height: 1.02; color: {spec.get("fill") or accent}; text-shadow: {shadow};{stroke} margin-top: 6px; white-space: nowrap; }}
 """
     markup = f'<div id="{tid}-box" data-layout-allow-overflow><div id="{tid}-line">{wl}</div><div id="{tid}-big">{html.escape(big)}</div></div>'
     js = []
@@ -144,12 +152,19 @@ def main() -> None:
     ap.add_argument("spec", type=Path)
     ap.add_argument("--accent", default="#5CE1E6")
     ap.add_argument("--glow", type=float, default=1.0, help="intensidade do brilho neon (1 = padrão)")
+    ap.add_argument("--fill", default="", help='cor da letra da PALAVRA (padrão = accent). "#000" = neon preto')
+    ap.add_argument("--stroke", type=float, default=0, help="contorno neon em px (use com --fill escuro, ex.: 3)")
     args = ap.parse_args()
 
     hf = args.hf_dir.resolve()
     page = (hf / "index.html").read_text()
     W, H = (int(x) for x in re.search(r'data-width="(\d+)" data-height="(\d+)"', page).groups())
     specs = json.loads(args.spec.read_text())
+    for sp in specs:
+        if args.fill:
+            sp.setdefault("fill", args.fill)
+        if args.stroke:
+            sp.setdefault("stroke", args.stroke)
     expanded = []
     for sp in specs:
         if sp.get("style") != "fim" and sp.get("script") and sp.get("split", True):
