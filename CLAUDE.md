@@ -114,6 +114,18 @@ cd $H && npx hyperframes check && npx hyperframes snapshot --at 2.5,7.5,14.9
 Ler o `contact-sheet.jpg` gerado em `.hyperframes/artifacts/snapshots/<id>/`: texto legível,
 nada cobrindo o rosto, animação no momento certo.
 
+Áudio — ruído e música (opcionais, antes do render final):
+```bash
+python tools/denoise.py $P/bruto.mov --ruido 1.5-3.9        # trecho SÓ de ruído, sem toque/bip
+python tools/gerar_musica.py $P/edit --duracao 20 --opcao leve "warm acoustic ..., no vocals"
+python tools/gerar_musica.py $P/edit --escolher leve         # vira edit/musica.wav
+python tools/render_final.py $P/edit --so-audio             # troca só o áudio (sem re-render do vídeo)
+```
+Ruído: cadeia passa-altas → RNNoise (`models/sh.rnnn`) → perfil estacionário. Medir pausas vs
+fala antes/depois; nunca o modo adaptativo do noisereduce (afina a voz). Música: MusicGen local
+(sem direitos autorais), normalizada 18 dB abaixo da voz (`--musica-db`) + ducking na fala.
+Lembrar a usuária: música do próprio Instagram (biblioteca do app) também é opção.
+
 Render final (HyperFrames + áudio original do video-use, -14 LUFS):
 ```bash
 python tools/render_final.py $P/edit                        # --quality draft para rascunho
@@ -143,4 +155,6 @@ registrar aqui.
 | `prepare_hyperframes.py` | 2 | Monta projeto HyperFrames com o corte e palavras remapeadas |
 | `add_overlay.py` | 2 | Insere/lista/remove animações a partir dos templates |
 | `make_captions.py` | 2 | Legendas palavra a palavra com ênfase, posição e quebras ajustáveis |
+| `denoise.py` | 1½ | Redução de ruído de fundo (RNNoise + perfil) → audio_limpo.wav |
+| `gerar_musica.py` | 2 | Música de fundo instrumental gerada localmente (MusicGen) |
 | `render_final.py` | 2 | check → render (chrome-headless-shell) → áudio do video-use → final.mp4 |

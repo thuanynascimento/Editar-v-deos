@@ -48,8 +48,12 @@ def build_exact_audio(edit: Path, out_wav: Path) -> None:
     durs = segment_durations(edl, edit, round(int(n) / int(d)))
     srcs = list(edl["sources"].keys())
     inputs: list[str] = []
+    clean = edit / "audio_limpo.wav"   # gerado por tools/denoise.py (mesma timeline da fonte)
     for k in srcs:
-        inputs += ["-i", edl["sources"][k]]
+        use_clean = clean.exists() and len(srcs) == 1
+        inputs += ["-i", str(clean) if use_clean else edl["sources"][k]]
+    if clean.exists() and len(srcs) == 1:
+        print("  áudio: usando a versão com ruído reduzido (audio_limpo.wav)")
     parts, labels = [], []
     for i, (r, dur) in enumerate(zip(edl["ranges"], durs)):
         si = srcs.index(r["source"])
@@ -72,6 +76,35 @@ def build_exact_audio(edit: Path, out_wav: Path) -> None:
     raw.unlink(missing_ok=True)
 
 
+def find_music(edit: Path) -> Path | None:
+    for ext in ("wav", "mp3", "m4a", "aac", "flac", "ogg"):
+        if (edit / f"musica.{ext}").exists():
+            return edit / f"musica.{ext}"
+    return None
+
+
+def mix_music(voice_wav: Path, music: Path, out_wav: Path, gap_db: float, duck_db: float) -> None:
+    """Mistura música de fundo sob a voz (já em -14 LUFS).
+    - música normalizada para (-14 - gap_db) LUFS: fica "atrás" da voz o tempo todo
+    - ducking por sidechain: abaixa mais ~duck_db enquanto há fala, volta nas pausas
+    - fade-in 0.6 s, fade-out 1.2 s no fim; repete a faixa se for mais curta que o vídeo
+    - limitador final em -1 dBTP"""
+    dur = duration(voice_wav)
+    target = -14 - gap_db
+    ratio = max(1.5, min(20.0, 1 + duck_db / 3))
+    graph = (
+        f"[1:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{dur:.6f},asetpts=PTS-STARTPTS,"
+        f"loudnorm=I={target}:TP=-6:LRA=11,aresample=48000,"
+        f"afade=t=in:st=0:d=0.6,afade=t=out:st={max(0, dur - 1.2):.3f}:d=1.2[m];"
+        f"[0:a]aformat=channel_layouts=stereo,asplit=2[v][key];"
+        f"[m][key]sidechaincompress=threshold=0.02:ratio={ratio:.1f}:attack=40:release=450:makeup=1[md];"
+        f"[v][md]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.84:level=false[out]"
+    )
+    subprocess.run(["ffmpeg", "-y", "-i", str(voice_wav), "-stream_loop", "-1", "-i", str(music),
+                    "-filter_complex", graph, "-map", "[out]", "-c:a", "pcm_s16le", str(out_wav)],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 def duration(p: Path) -> float:
     return float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
                                  "-of", "csv=p=0", str(p)], capture_output=True, text=True).stdout)
@@ -83,6 +116,12 @@ def main() -> None:
     ap.add_argument("--quality", default="looks", choices=["draft", "looks", "delivery"])
     ap.add_argument("-o", "--output", type=Path, default=None)
     ap.add_argument("--skip-check", action="store_true")
+    ap.add_argument("--musica-db", type=float, default=18.0,
+                    help="quanto a música fica abaixo da voz, em dB (padrão 18; menor = música mais alta)")
+    ap.add_argument("--ducking-db", type=float, default=6.0, help="quanto a música abaixa a mais durante a fala")
+    ap.add_argument("--sem-musica", action="store_true")
+    ap.add_argument("--so-audio", action="store_true",
+                    help="não renderiza o HyperFrames de novo: reaproveita o vídeo do final.mp4 e troca só o áudio")
     args = ap.parse_args()
 
     edit = args.edit_dir.resolve()
@@ -95,7 +134,13 @@ def main() -> None:
     if (hs := headless_shell()) and "HYPERFRAMES_BROWSER_PATH" not in env:
         env["HYPERFRAMES_BROWSER_PATH"] = hs
 
-    if not args.skip_check:
+    if args.so_audio:
+        if not out.exists():
+            sys.exit("--so-audio precisa de um final.mp4 já renderizado")
+        subprocess.run(["ffmpeg", "-y", "-i", str(out), "-map", "0:v:0", "-c", "copy", str(raw)],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("reaproveitando o vídeo do final.mp4 (só o áudio muda)")
+    if not args.skip_check and not args.so_audio:
         r = subprocess.run([str(HF_BIN), "check", "--safe-zone", "reels"], cwd=hf, env=env, capture_output=True, text=True)
         tail = "\n".join((r.stdout + r.stderr).splitlines()[-25:])
         if r.returncode != 0 or "Check passed" not in r.stdout + r.stderr:
@@ -103,18 +148,25 @@ def main() -> None:
             sys.exit("hyperframes check falhou — corrija antes de renderizar")
         print("check: ok")
 
-    print(f"renderizando HyperFrames ({args.quality})...", flush=True)
-    r = subprocess.run([str(HF_BIN), "render", "--quality", args.quality, "-o", str(raw)],
-                       cwd=hf, env=env, capture_output=True, text=True)
-    summary = [ln for ln in (r.stdout + r.stderr).splitlines() if re.search(r"rendered in|capture ·|✗|Fix:", ln)]
-    print("\n".join(summary))
-    if r.returncode != 0 or not raw.exists():
-        sys.exit("render falhou")
+    if not args.so_audio:
+        print(f"renderizando HyperFrames ({args.quality})...", flush=True)
+        r = subprocess.run([str(HF_BIN), "render", "--quality", args.quality, "-o", str(raw)],
+                           cwd=hf, env=env, capture_output=True, text=True)
+        summary = [ln for ln in (r.stdout + r.stderr).splitlines() if re.search(r"rendered in|capture ·|✗|Fix:", ln)]
+        print("\n".join(summary))
+        if r.returncode != 0 or not raw.exists():
+            sys.exit("render falhou")
 
     # áudio: remontado da fonte com precisão de amostra (fallback: o do corte do video-use)
     wav = edit / "audio_final.wav"
     try:
         build_exact_audio(edit, wav)
+        music = None if args.sem_musica else find_music(edit)
+        if music:
+            print(f"  música: {music.name} ({args.musica_db:.0f} dB abaixo da voz, ducking {args.ducking_db:.0f} dB)")
+            mixed = edit / "audio_mix.wav"
+            mix_music(wav, music, mixed, args.musica_db, args.ducking_db)
+            mixed.replace(wav)
         a_in, a_codec = str(wav), ["-c:a", "aac", "-b:a", "192k"]
     except Exception as e:  # noqa: BLE001
         print(f"  aviso: áudio exato falhou ({e}); usando o áudio do cortado.mp4")

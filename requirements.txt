@@ -6,3 +6,5 @@ pillow
 numpy
 # transcrição local (sem API key)
 faster-whisper
+noisereduce
+# música de fundo (opcional, pesado: ~4 GB) — pip install torch transformers accelerate scipy
