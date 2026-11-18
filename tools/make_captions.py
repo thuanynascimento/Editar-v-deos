@@ -97,6 +97,8 @@ def main() -> None:
     ap.add_argument("--exclude", default="",
                     help="faixas 'ini-fim,ini-fim' (timeline do corte) cujas palavras NÃO viram legenda "
                          "(ex.: já aparecem num título grande)")
+    ap.add_argument("--blur", action="store_true",
+                    help="entra e sai com desfoque (estilo Reels de autoridade) em vez de subir")
     ap.add_argument("--lead", type=float, default=0.08, help="legenda aparece X s antes da 1ª palavra")
     args = ap.parse_args()
 
@@ -148,7 +150,10 @@ def main() -> None:
     for gi, (g, (s, e)) in enumerate(zip(groups, spans)):
         gid = f"cap-{gi}"
         spans_html = []
-        js.append(f'tl.fromTo("#{gid}-in", {{ opacity: 0, y: 18 }}, {{ opacity: 1, y: 0, duration: 0.16, ease: "power2.out" }}, {s:.3f});')
+        if args.blur:
+            js.append(f'tl.fromTo("#{gid}-in", {{ opacity: 0, scale: 1.06, filter: "blur(9px)" }}, {{ opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.18, ease: "power2.out" }}, {s:.3f});')
+        else:
+            js.append(f'tl.fromTo("#{gid}-in", {{ opacity: 0, y: 18 }}, {{ opacity: 1, y: 0, duration: 0.16, ease: "power2.out" }}, {s:.3f});')
         for wi, w in enumerate(g):
             cls = "w e" if w["emph"] else "w"
             spans_html.append(f'<span id="{gid}-w{wi}" class="{cls}">{html.escape(w["text"])}</span>')
@@ -156,7 +161,8 @@ def main() -> None:
                 t = max(s, w["start"])
                 js.append(f'tl.fromTo("#{gid}-w{wi}", {{ y: 0, scale: 1 }}, {{ y: -10, scale: 1.04, duration: 0.14, ease: "power2.out", '
                           f'yoyo: true, repeat: 1 }}, {t:.3f});')
-        js.append(f'tl.to("#{gid}-in", {{ opacity: 0, duration: 0.1, ease: "power2.in" }}, {max(s, e - 0.1):.3f});')
+        out = ', filter: "blur(7px)"' if args.blur else ""
+        js.append(f'tl.to("#{gid}-in", {{ opacity: 0{out}, duration: 0.1, ease: "power2.in" }}, {max(s, e - 0.1):.3f});')
         groups_html.append(
             f'    <div id="{gid}" class="clip grp" data-start="{s}" data-duration="{round(e - s, 3)}" data-track-index="0">'
             f'<div id="{gid}-in" class="in">{" ".join(spans_html)}</div></div>')
