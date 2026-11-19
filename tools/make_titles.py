@@ -53,7 +53,7 @@ def fit_size(text: str, max_w: int, base: int, per_char: float = 0.80) -> int:
     return int(min(base, max_w / (len(text) * per_char)))
 
 
-def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"):
+def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all", fill: str | None = None):
     """part: "big" = só a palavra grande (camada ATRÁS da pessoa); "script" = só o manuscrito
     (camada NA FRENTE, para não sumir atrás da cabeça); "all" = os dois juntos."""
     tid, s, e = spec["id"], spec["start"], spec["end"]
@@ -77,11 +77,13 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
         s_pos = f"right: {int(W * 0.08)}px; top: {int(size * 0.80)}px;"
     shadow = (f"0 0 {int(10 * glow)}px {rgba(accent, .95)}, 0 0 {int(26 * glow)}px {rgba(accent, .7)}, "
               f"0 0 {int(60 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.35)")
+    # texto escuro (--fill) precisa de contorno neon fino para a letra não sumir no brilho
+    stroke = f" -webkit-text-stroke: {max(2, size // 60)}px {accent};" if fill else ""
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; height: {box_h}px; overflow: visible; }}
     #{tid}-big {{ position: absolute; left: 0; top: 0; width: {W}px; text-align: center; white-space: nowrap;
       font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 900; font-size: {size}px;
-      line-height: 1; letter-spacing: -0.01em; color: {accent}; text-shadow: {shadow}; }}
+      line-height: 1; letter-spacing: -0.01em; color: {fill or accent}; text-shadow: {shadow};{stroke} }}
     #{tid}-big .L {{ display: inline-block; }}
     #{tid}-s {{ position: absolute; {s_pos} }}
 """
@@ -110,7 +112,7 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
     return css, markup, js
 
 
-def fim(spec: dict, W: int, H: int, accent: str, glow: float):
+def fim(spec: dict, W: int, H: int, accent: str, glow: float, fill: str | None = None):
     tid, s, e = spec["id"], spec["start"], spec["end"]
     cy = H * spec.get("y", 58) / 100
     words = spec.get("line", [])
@@ -120,13 +122,14 @@ def fim(spec: dict, W: int, H: int, accent: str, glow: float):
     top = int(cy - (line_size + big_size) / 2)
     wl = " ".join(f'<span class="w" id="{tid}-w{i}">{html.escape(t)}</span>' for i, (t, _) in enumerate(words))
     shadow = f"0 0 {int(12 * glow)}px {rgba(accent, .8)}, 0 0 {int(34 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.4)"
+    stroke = f" -webkit-text-stroke: {max(2, big_size // 60)}px {accent};" if fill else ""
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; text-align: center; overflow: visible; }}
     #{tid}-line {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 800; font-size: {line_size}px;
       color: #fff; line-height: 1.1; text-shadow: 0 3px 16px rgba(0,0,0,.45); }}
     #{tid}-line .w {{ display: inline-block; }}
     #{tid}-big {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 900; font-style: italic;
-      font-size: {big_size}px; line-height: 1.02; color: {accent}; text-shadow: {shadow}; margin-top: 6px; white-space: nowrap; }}
+      font-size: {big_size}px; line-height: 1.02; color: {fill or accent}; text-shadow: {shadow};{stroke} margin-top: 6px; white-space: nowrap; }}
 """
     markup = f'<div id="{tid}-box" data-layout-allow-overflow><div id="{tid}-line">{wl}</div><div id="{tid}-big">{html.escape(big)}</div></div>'
     js = []
@@ -143,6 +146,7 @@ def main() -> None:
     ap.add_argument("hf_dir", type=Path)
     ap.add_argument("spec", type=Path)
     ap.add_argument("--accent", default="#5CE1E6")
+    ap.add_argument("--fill", default=None, help="cor da letra das palavras grandes (ex.: #0A0A0A = preto em neon); padrão = --accent")
     ap.add_argument("--glow", type=float, default=1.0, help="intensidade do brilho neon (1 = padrão)")
     args = ap.parse_args()
 
@@ -161,8 +165,8 @@ def main() -> None:
     for sp in expanded:
         tid = sp["id"]
         maker = fim if sp.get("style") == "fim" else neon
-        css, markup, js = (maker(sp, W, H, args.accent, args.glow, sp.get("_part", "all")) if maker is neon
-                           else maker(sp, W, H, args.accent, args.glow))
+        css, markup, js = (maker(sp, W, H, args.accent, args.glow, sp.get("_part", "all"), args.fill) if maker is neon
+                           else maker(sp, W, H, args.accent, args.glow, args.fill))
         # tempos do spec são globais; a cena começa em sp["start"] → converte para local
         s0 = sp["start"]
         js = [re.sub(r"\}, (\d+\.\d+)\);$", lambda m: f"}}, {float(m.group(1)) - s0:.3f});", j) for j in js]

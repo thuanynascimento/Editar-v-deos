@@ -81,6 +81,7 @@ def main() -> None:
     ap.add_argument("--emphasis", default="", help="palavras/expressões de ênfase, separadas por vírgula")
     ap.add_argument("--break", dest="breaks", default="", help="força quebra de grupo antes destas palavras/expressões (ex.: \"do que,uma renda\")")
     ap.add_argument("--accent", default="#FFD43B", help="cor das palavras de ênfase")
+    ap.add_argument("--emph-neon", default="", help="brilho neon nas palavras de ênfase (ex.: #39FF14 com --accent #0A0A0A = preto em neon)")
     ap.add_argument("--color", default="#FFFFFF", help="cor do texto")
     ap.add_argument("--font", default="Montserrat")
     ap.add_argument("--weight", type=int, default=700)
@@ -141,6 +142,11 @@ def main() -> None:
 
     shadow = "none" if args.no_shadow else "0 3px 22px rgba(0,0,0,.38), 0 1px 3px rgba(0,0,0,.25)"
     tt = "uppercase" if args.uppercase else "none"
+    emph_neon = ""
+    if args.emph_neon:
+        n = args.emph_neon
+        emph_neon = (f" -webkit-text-stroke: 1.5px {n}; text-shadow: 0 0 6px {n}, 0 0 14px {n}, 0 0 30px {n}aa, "
+                     f"0 2px 10px rgba(0,0,0,.35);")
     cap_h = round(size * 2.6)
     top = round(H * args.y / 100 - cap_h / 2)
 
@@ -179,7 +185,7 @@ def main() -> None:
       font-size: {size}px; font-weight: {args.weight}; line-height: 1.12; color: {args.color};
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
-    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
+    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em;{emph_neon} }}
   </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}
