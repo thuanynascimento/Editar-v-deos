@@ -93,6 +93,8 @@ def main() -> None:
     ap.add_argument("--max-chars", type=int, default=20)
     ap.add_argument("--pause", type=float, default=0.18, help="pausa que quebra o grupo (s)")
     ap.add_argument("--uppercase", action="store_true")
+    ap.add_argument("--emph-glow", default=None,
+                    help="brilho neon nas palavras de ênfase (ex.: --accent '#000' --emph-glow '#fff' = neon preto)")
     ap.add_argument("--no-shadow", action="store_true", help="tira até a sombra suave")
     ap.add_argument("--exclude", default="",
                     help="faixas 'ini-fim,ini-fim' (timeline do corte) cujas palavras NÃO viram legenda "
@@ -139,6 +141,12 @@ def main() -> None:
         spans[gi][1] = round(min(end, nxt, root_dur), 3)
         spans[gi][0] = round(spans[gi][0], 3)
 
+    emph_shadow = ""
+    if args.emph_glow:
+        h = args.emph_glow.lstrip("#")
+        r, g_, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+        emph_shadow = (f" text-shadow: 0 0 3px rgba({r},{g_},{b},1), 0 0 8px rgba({r},{g_},{b},1), "
+                       f"0 0 16px rgba({r},{g_},{b},.9), 0 0 30px rgba({r},{g_},{b},.7), 0 0 50px rgba({r},{g_},{b},.45);")
     shadow = "none" if args.no_shadow else "0 3px 22px rgba(0,0,0,.38), 0 1px 3px rgba(0,0,0,.25)"
     tt = "uppercase" if args.uppercase else "none"
     cap_h = round(size * 2.6)
@@ -179,7 +187,7 @@ def main() -> None:
       font-size: {size}px; font-weight: {args.weight}; line-height: 1.12; color: {args.color};
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
-    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
+    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em;{emph_shadow} }}
   </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}

@@ -42,6 +42,10 @@ FONTS = """
 """
 
 
+# cores ajustáveis por argumento (main preenche); glow None = mesma cor do destaque
+STYLE = {"glow": None, "script": "#fff", "line": "#fff", "script_shadow": "0 3px 14px rgba(0,0,0,.45)"}
+
+
 def rgba(hex_color: str, a: float) -> str:
     h = hex_color.lstrip("#")
     r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
@@ -75,8 +79,9 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
         s_pos = f"left: {int(W * 0.14)}px; top: {-int(s_size * 1.02)}px;"
     else:
         s_pos = f"right: {int(W * 0.08)}px; top: {int(size * 0.80)}px;"
-    shadow = (f"0 0 {int(10 * glow)}px {rgba(accent, .95)}, 0 0 {int(26 * glow)}px {rgba(accent, .7)}, "
-              f"0 0 {int(60 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.35)")
+    gc = STYLE["glow"] or accent
+    shadow = (f"0 0 {int(10 * glow)}px {rgba(gc, .95)}, 0 0 {int(26 * glow)}px {rgba(gc, .7)}, "
+              f"0 0 {int(60 * glow)}px {rgba(gc, .45)}, 0 4px 14px rgba(0,0,0,.35)")
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; height: {box_h}px; overflow: visible; }}
     #{tid}-big {{ position: absolute; left: 0; top: 0; width: {W}px; text-align: center; white-space: nowrap;
@@ -119,11 +124,13 @@ def fim(spec: dict, W: int, H: int, accent: str, glow: float):
     big_size = fit_size(big, int(W * 0.80), spec.get("size", 150), 0.78)
     top = int(cy - (line_size + big_size) / 2)
     wl = " ".join(f'<span class="w" id="{tid}-w{i}">{html.escape(t)}</span>' for i, (t, _) in enumerate(words))
-    shadow = f"0 0 {int(12 * glow)}px {rgba(accent, .8)}, 0 0 {int(34 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.4)"
+    gc = STYLE["glow"] or accent
+    shadow = (f"0 0 {int(10 * glow)}px {rgba(gc, .95)}, 0 0 {int(26 * glow)}px {rgba(gc, .7)}, "
+              f"0 0 {int(60 * glow)}px {rgba(gc, .45)}, 0 4px 14px rgba(0,0,0,.4)")
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; text-align: center; overflow: visible; }}
     #{tid}-line {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 800; font-size: {line_size}px;
-      color: #fff; line-height: 1.1; text-shadow: 0 3px 16px rgba(0,0,0,.45); }}
+      color: {STYLE["line"]}; line-height: 1.1; text-shadow: 0 3px 16px rgba(0,0,0,.45); }}
     #{tid}-line .w {{ display: inline-block; }}
     #{tid}-big {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 900; font-style: italic;
       font-size: {big_size}px; line-height: 1.02; color: {accent}; text-shadow: {shadow}; margin-top: 6px; white-space: nowrap; }}
@@ -144,7 +151,16 @@ def main() -> None:
     ap.add_argument("spec", type=Path)
     ap.add_argument("--accent", default="#5CE1E6")
     ap.add_argument("--glow", type=float, default=1.0, help="intensidade do brilho neon (1 = padrão)")
+    ap.add_argument("--glow-color", default=None,
+                    help="cor do brilho (padrão = --accent). Neon preto: --accent '#000' --glow-color '#fff'")
+    ap.add_argument("--script-color", default="#fff", help="cor do manuscrito")
+    ap.add_argument("--script-glow", default=None, help="brilho do manuscrito em vez da sombra escura (ex.: '#fff')")
+    ap.add_argument("--line-color", default="#fff", help="cor da linha do estilo 'fim'")
     args = ap.parse_args()
+    STYLE.update(glow=args.glow_color, script=args.script_color, line=args.line_color)
+    if args.script_glow:
+        STYLE["script_shadow"] = (f"0 0 8px {rgba(args.script_glow, .95)}, 0 0 20px {rgba(args.script_glow, .7)}, "
+                                  f"0 0 40px {rgba(args.script_glow, .4)}")
 
     hf = args.hf_dir.resolve()
     page = (hf / "index.html").read_text()
@@ -172,8 +188,8 @@ def main() -> None:
   <style>
 {FONTS}
     #root {{ position: absolute; inset: 0; background: transparent; }}
-    .S {{ font-family: "Yellowtail", cursive; color: #fff; white-space: nowrap; transform: rotate(-5deg);
-      text-shadow: 0 3px 14px rgba(0,0,0,.45); line-height: 1; }}
+    .S {{ font-family: "Yellowtail", cursive; color: {STYLE["script"]}; white-space: nowrap; transform: rotate(-5deg);
+      text-shadow: {STYLE["script_shadow"]}; line-height: 1; }}
 {css}
   </style>
   <div id="root" data-composition-id="{tid}" data-width="{W}" data-height="{H}" data-layout-allow-overflow>
