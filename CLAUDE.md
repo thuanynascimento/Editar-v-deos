@@ -116,6 +116,10 @@ Sobre a pessoa, NUNCA manuscrito no rosto: meça o topo da cabeça no alpha do r
 `"script_pos": "above"` (manuscrito curto entre o topo da tela e a cabeça), `size` ~150, `y` ~24.
 Entrega: mandar também cópia leve (CRF 20, ~13 MB) com SendUserFile `display: "attach"` — o player
 do chat não oferece salvar em alguns celulares.
+Neon PRETO (cliente pediu só preto e branco): `make_titles.py --accent "#0B0B0B" --glow-color "#FFFFFF"
+--script-color "#0B0B0B" --script-glow "#FFFFFF"` e `make_captions.py --accent "#0B0B0B" --emph-glow "#FFFFFF"`.
+Ênfase preta some sobre roupa preta: legenda na altura da mesa/mãos (`--y` ~60). Stickers na frente da pessoa (z 56),
+entre ~1250 e 1520 px (abaixo disso o Reels cobre com nome/legenda do post).
 Recorte da pessoa (z 50) por cima dos títulos neon → título ATRÁS dela; o manuscrito vai numa camada
 `-esc` NA FRENTE (z 55). Fontes em `assets/fonts/` (npm pack @fontsource/yellowtail @fontsource/montserrat).
 remove-background: se falhar instalando onnxruntime-node, rode
