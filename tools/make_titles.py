@@ -121,14 +121,15 @@ def fim(spec: dict, W: int, H: int, accent: str, glow: float):
     words = spec.get("line", [])
     line_size = spec.get("line_size", 64)
     big = spec["big"]
-    big_size = fit_size(big, int(W * 0.80), spec.get("size", 150), 0.78)
+    width = int(W * spec.get("width", 100) / 100)   # largura do bloco (% da tela) — 76 cabe na área segura
+    big_size = fit_size(big, int(min(W * 0.80, width)), spec.get("size", 150), 0.78)
     top = int(cy - (line_size + big_size) / 2)
     wl = " ".join(f'<span class="w" id="{tid}-w{i}">{html.escape(t)}</span>' for i, (t, _) in enumerate(words))
     gc = STYLE["glow"] or accent
     shadow = (f"0 0 {int(10 * glow)}px {rgba(gc, .95)}, 0 0 {int(26 * glow)}px {rgba(gc, .7)}, "
               f"0 0 {int(60 * glow)}px {rgba(gc, .45)}, 0 4px 14px rgba(0,0,0,.4)")
     css = f"""
-    #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; text-align: center; overflow: visible; }}
+    #{tid}-box {{ position: absolute; left: {(W - width) // 2}px; top: {top}px; width: {width}px; text-align: center; overflow: visible; }}
     #{tid}-line {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 800; font-size: {line_size}px;
       color: {STYLE["line"]}; line-height: 1.1; text-shadow: 0 3px 16px rgba(0,0,0,.45); }}
     #{tid}-line .w {{ display: inline-block; }}
