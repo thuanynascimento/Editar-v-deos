@@ -77,8 +77,7 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
         s_pos = f"right: {int(W * 0.08)}px; top: {int(size * 0.80)}px;"
     shadow = (f"0 0 {int(10 * glow)}px {rgba(accent, .95)}, 0 0 {int(26 * glow)}px {rgba(accent, .7)}, "
               f"0 0 {int(60 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.35)")
-    # texto escuro (--fill) precisa de contorno neon fino para a letra não sumir no brilho
-    stroke = f" -webkit-text-stroke: {max(2, size // 60)}px {accent};" if fill else ""
+    stroke = ""  # contorno (-webkit-text-stroke) cria falhas brancas onde os traços da letra se cruzam
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; height: {box_h}px; overflow: visible; }}
     #{tid}-big {{ position: absolute; left: 0; top: 0; width: {W}px; text-align: center; white-space: nowrap;
@@ -122,7 +121,7 @@ def fim(spec: dict, W: int, H: int, accent: str, glow: float, fill: str | None =
     top = int(cy - (line_size + big_size) / 2)
     wl = " ".join(f'<span class="w" id="{tid}-w{i}">{html.escape(t)}</span>' for i, (t, _) in enumerate(words))
     shadow = f"0 0 {int(12 * glow)}px {rgba(accent, .8)}, 0 0 {int(34 * glow)}px {rgba(accent, .45)}, 0 4px 14px rgba(0,0,0,.4)"
-    stroke = f" -webkit-text-stroke: {max(2, big_size // 60)}px {accent};" if fill else ""
+    stroke = ""
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; text-align: center; overflow: visible; }}
     #{tid}-line {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 800; font-size: {line_size}px;

@@ -145,7 +145,7 @@ def main() -> None:
     emph_neon = ""
     if args.emph_neon:
         n = args.emph_neon
-        emph_neon = (f" -webkit-text-stroke: 1.5px {n}; text-shadow: 0 0 6px {n}, 0 0 14px {n}, 0 0 30px {n}aa, "
+        emph_neon = (f" text-shadow: 0 0 6px {n}, 0 0 14px {n}, 0 0 30px {n}aa, "
                      f"0 2px 10px rgba(0,0,0,.35);")
     cap_h = round(size * 2.6)
     top = round(H * args.y / 100 - cap_h / 2)
