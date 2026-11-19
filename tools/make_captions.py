@@ -85,6 +85,8 @@ def main() -> None:
     ap.add_argument("--font", default="Montserrat")
     ap.add_argument("--weight", type=int, default=700)
     ap.add_argument("--emph-weight", type=int, default=900)
+    ap.add_argument("--emph-glow", default="", help="cor do brilho neon nas palavras de ênfase "
+                    "(ex.: --accent '#000' --emph-glow '#fff' = preto em neon)")
     ap.add_argument("--size", type=int, default=0, help="px (0 = automático: 6.8%% da largura)")
     ap.add_argument("--width", type=float, default=72.0,
                     help="largura máxima da legenda em %% da tela (72 deixa livre a coluna de botões do Reels/TikTok)")
@@ -141,6 +143,13 @@ def main() -> None:
 
     shadow = "none" if args.no_shadow else "0 3px 22px rgba(0,0,0,.38), 0 1px 3px rgba(0,0,0,.25)"
     tt = "uppercase" if args.uppercase else "none"
+    emph_glow = ""
+    if args.emph_glow:
+        h = args.emph_glow.lstrip("#")
+        h = "".join(c * 2 for c in h) if len(h) == 3 else h
+        r, g_, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+        emph_glow = (f" text-shadow: 0 0 4px rgba({r},{g_},{b},1), 0 0 12px rgba({r},{g_},{b},.9), "
+                     f"0 0 26px rgba({r},{g_},{b},.7), 0 0 48px rgba({r},{g_},{b},.4);")
     cap_h = round(size * 2.6)
     top = round(H * args.y / 100 - cap_h / 2)
 
@@ -179,7 +188,7 @@ def main() -> None:
       font-size: {size}px; font-weight: {args.weight}; line-height: 1.12; color: {args.color};
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
-    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
+    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em;{emph_glow} }}
   </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}

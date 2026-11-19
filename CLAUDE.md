@@ -116,6 +116,10 @@ Sobre a pessoa, NUNCA manuscrito no rosto: meça o topo da cabeça no alpha do r
 `"script_pos": "above"` (manuscrito curto entre o topo da tela e a cabeça), `size` ~150, `y` ~24.
 Entrega: mandar também cópia leve (CRF 20, ~13 MB) com SendUserFile `display: "attach"` — o player
 do chat não oferece salvar em alguns celulares.
+"Preto em neon" (letra preta, brilho branco): `make_titles.py ... --accent "#FFFFFF" --text-color "#0A0A0A"`
+e `make_captions.py ... --accent "#0A0A0A" --emph-glow "#FFFFFF"`. Recorte: `<video id="pessoa" ... muted>`
+no index.html com `#pessoa { z-index: 50 }`; zoom de corte = mesmo `scale` em `#base` e `#pessoa` (≤1.10,
+senão a cabeça esconde demais o título). Títulos com pessoa sentada: `y` ~16.5, `script_size` ~92.
 Recorte da pessoa (z 50) por cima dos títulos neon → título ATRÁS dela; o manuscrito vai numa camada
 `-esc` NA FRENTE (z 55). Fontes em `assets/fonts/` (npm pack @fontsource/yellowtail @fontsource/montserrat).
 remove-background: se falhar instalando onnxruntime-node, rode
