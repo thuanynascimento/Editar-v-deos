@@ -110,6 +110,7 @@ caracteres. Reels: `check --safe-zone reels` (a área do TikTok é mais estreita
 Estilo "Reels de autoridade" (referência da cliente em videos/reels-01/referencia):
 ```bash
 python tools/make_titles.py $H titulos.json --accent "#5CE1E6"   # PALAVRA neon + manuscrito; "fim"
+#   --fill "#0A0A0A" = "preto em neon" (letra preta, contorno e brilho na cor de destaque)
 node_modules/.bin/hyperframes remove-background $P/edit/cortado.mp4 -o $P/edit/recorte/pessoa.webm --quality best
 ```
 Sobre a pessoa, NUNCA manuscrito no rosto: meça o topo da cabeça no alpha do recorte e use

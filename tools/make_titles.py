@@ -53,6 +53,14 @@ def fit_size(text: str, max_w: int, base: int, per_char: float = 0.80) -> int:
     return int(min(base, max_w / (len(text) * per_char)))
 
 
+FILL = None  # --fill: cor da letra (None = a própria cor de destaque); ex. "#0A0A0A" = preto em neon
+
+
+def stroke_css(accent: str) -> str:
+    """Letra escura com contorno de "tubo" neon (só quando --fill troca o preenchimento)."""
+    return f" -webkit-text-stroke: 4px {accent}; paint-order: stroke fill;" if FILL else ""
+
+
 def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"):
     """part: "big" = só a palavra grande (camada ATRÁS da pessoa); "script" = só o manuscrito
     (camada NA FRENTE, para não sumir atrás da cabeça); "all" = os dois juntos."""
@@ -81,7 +89,7 @@ def neon(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; height: {box_h}px; overflow: visible; }}
     #{tid}-big {{ position: absolute; left: 0; top: 0; width: {W}px; text-align: center; white-space: nowrap;
       font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 900; font-size: {size}px;
-      line-height: 1; letter-spacing: -0.01em; color: {accent}; text-shadow: {shadow}; }}
+      line-height: 1; letter-spacing: -0.01em; color: {FILL or accent}; text-shadow: {shadow};{stroke_css(accent)} }}
     #{tid}-big .L {{ display: inline-block; }}
     #{tid}-s {{ position: absolute; {s_pos} }}
 """
@@ -126,7 +134,7 @@ def fim(spec: dict, W: int, H: int, accent: str, glow: float):
       color: #fff; line-height: 1.1; text-shadow: 0 3px 16px rgba(0,0,0,.45); }}
     #{tid}-line .w {{ display: inline-block; }}
     #{tid}-big {{ font-family: "MontserratT", "Montserrat", sans-serif; font-weight: 900; font-style: italic;
-      font-size: {big_size}px; line-height: 1.02; color: {accent}; text-shadow: {shadow}; margin-top: 6px; white-space: nowrap; }}
+      font-size: {big_size}px; line-height: 1.02; color: {FILL or accent}; text-shadow: {shadow};{stroke_css(accent)} margin-top: 6px; white-space: nowrap; }}
 """
     markup = f'<div id="{tid}-box" data-layout-allow-overflow><div id="{tid}-line">{wl}</div><div id="{tid}-big">{html.escape(big)}</div></div>'
     js = []
@@ -144,7 +152,11 @@ def main() -> None:
     ap.add_argument("spec", type=Path)
     ap.add_argument("--accent", default="#5CE1E6")
     ap.add_argument("--glow", type=float, default=1.0, help="intensidade do brilho neon (1 = padrão)")
+    ap.add_argument("--fill", default=None,
+                    help='cor da letra dos títulos (ex. "#0A0A0A" = preto em neon: letra preta, contorno e brilho na cor de destaque)')
     args = ap.parse_args()
+    global FILL
+    FILL = args.fill
 
     hf = args.hf_dir.resolve()
     page = (hf / "index.html").read_text()
