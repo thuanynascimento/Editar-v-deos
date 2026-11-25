@@ -82,6 +82,7 @@ def main() -> None:
     ap.add_argument("--break", dest="breaks", default="", help="força quebra de grupo antes destas palavras/expressões (ex.: \"do que,uma renda\")")
     ap.add_argument("--accent", default="#FFD43B", help="cor das palavras de ênfase")
     ap.add_argument("--color", default="#FFFFFF", help="cor do texto")
+    ap.add_argument("--emph-bg", default="", help="fundo (caixa) das palavras de ênfase, ex.: \"#013971\" — texto da ênfase usa --accent")
     ap.add_argument("--font", default="Montserrat")
     ap.add_argument("--weight", type=int, default=700)
     ap.add_argument("--emph-weight", type=int, default=900)
@@ -168,6 +169,10 @@ def main() -> None:
             if (hf / "assets" / "fonts" / f"montserrat-{wgt}-normal.woff2").exists():
                 font_faces += (f'    @font-face {{ font-family: "Montserrat"; font-weight: {wgt}; '
                                f'src: url("assets/fonts/montserrat-{wgt}-normal.woff2") format("woff2"); }}\n')
+    emph_bg_css = ""
+    if args.emph_bg:
+        emph_bg_css = (f"\n    .e {{ background: {args.emph_bg}; padding: 0.02em 0.22em 0.08em; border-radius: 0.16em; "
+                       f"text-shadow: none; box-shadow: 0 4px 16px rgba(0,0,0,.30); }}")
     comp = f"""<!-- Legendas geradas por tools/make_captions.py — edite o texto direto aqui ou rode o script de novo. -->
 <template>
   <style>
@@ -179,7 +184,7 @@ def main() -> None:
       font-size: {size}px; font-weight: {args.weight}; line-height: 1.12; color: {args.color};
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
-    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
+    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}{emph_bg_css}
   </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}
