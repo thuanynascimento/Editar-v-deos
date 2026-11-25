@@ -123,6 +123,18 @@ remove-background: se falhar instalando onnxruntime-node, rode
 Filtro "laranja verde" CapCut ~30%: campo `grade` do edl.json =
 `colorbalance=rs=-0.045:gs=0.015:bs=0.03:rm=0.015:gm=0.006:bm=-0.015:rh=0.036:gh=0.012:bh=-0.036,eq=saturation=1.05:contrast=1.03`.
 
+Estilo "RGA" (referência OFICIAL da cliente RGA jiu-jitsu, Reels "Comecei o jiu-jitsu com 40 anos"):
+```bash
+python tools/make_estilo_rga.py $H estilo_rga.json --zoom-cuts $P/edit/edl.json   # títulos, etiquetas, CTA, zoom
+python tools/make_captions.py $H --emphasis "..." --accent "#FFFFFF" --emph-box "#093B6E" --shadow 1.8 \
+    --size 62 --weight 700 --emph-weight 800 --y 47 --width 76
+```
+Título Anton branco com sombra dura azul-marinho `#093B6E` + ✦, manuscrito Caveat pequeno; etiquetas brancas
+inclinadas com texto marinho (até 3, nomes curtos — não podem descer até a cabeça, ~540 px); botão marinho
+"Agende pelo link da bio"; legenda branca na altura do peito, destaque em caixa marinha; punch-in 1.15 alternado
+nos cortes. Sem recorte da pessoa. Fontes: npm pack @fontsource/anton @fontsource/caveat → assets/fonts/anton.woff2,
+caveat-700.woff2. Exemplo de spec: videos/jiujitsu-agressivo/edit/estilo_rga.json.
+
 Verificar e olhar antes de renderizar:
 ```bash
 cd $H && npx hyperframes check && npx hyperframes snapshot --at 2.5,7.5,14.9
@@ -173,5 +185,6 @@ registrar aqui.
 | `make_captions.py` | 2 | Legendas palavra a palavra com ênfase, posição e quebras ajustáveis |
 | `denoise.py` | 1½ | Redução de ruído de fundo (RNNoise + perfil) → audio_limpo.wav |
 | `gerar_musica.py` | 2 | Música de fundo instrumental gerada localmente (MusicGen) |
+| `make_estilo_rga.py` | 2 | Estilo RGA: título Anton + manuscrito, etiquetas, botão CTA, zoom nos cortes |
 | `make_titles.py` | 2 | Títulos de palavra-chave neon (atrás da pessoa) + manuscrito + encerramento |
 | `render_final.py` | 2 | check → render (chrome-headless-shell) → áudio do video-use → final.mp4 |
