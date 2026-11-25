@@ -97,6 +97,9 @@ def main() -> None:
     ap.add_argument("--exclude", default="",
                     help="faixas 'ini-fim,ini-fim' (timeline do corte) cujas palavras NÃO viram legenda "
                          "(ex.: já aparecem num título grande)")
+    ap.add_argument("--emph-box", default="",
+                    help="cor de uma CAIXA atrás da palavra de ênfase (texto fica em --accent). "
+                         "Ex.: --emph-box \"#093B6E\" --accent \"#FFFFFF\" (estilo da referência jiu-jitsu)")
     ap.add_argument("--lead", type=float, default=0.08, help="legenda aparece X s antes da 1ª palavra")
     args = ap.parse_args()
 
@@ -168,6 +171,11 @@ def main() -> None:
             if (hf / "assets" / "fonts" / f"montserrat-{wgt}-normal.woff2").exists():
                 font_faces += (f'    @font-face {{ font-family: "Montserrat"; font-weight: {wgt}; '
                                f'src: url("assets/fonts/montserrat-{wgt}-normal.woff2") format("woff2"); }}\n')
+    box_css = ""
+    if args.emph_box:
+        box_css = (f"    .e {{{{ background: {args.emph_box}; padding: 0.04em 0.26em 0.1em; border-radius: 0.16em; "
+                   f"text-shadow: none; box-shadow: 0 4px 14px rgba(0,0,0,.25); margin: 0 0.12em; }}}}")
+        box_css = box_css.replace("{{", "{").replace("}}", "}")
     comp = f"""<!-- Legendas geradas por tools/make_captions.py — edite o texto direto aqui ou rode o script de novo. -->
 <template>
   <style>
@@ -180,6 +188,7 @@ def main() -> None:
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
     .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
+{box_css}
   </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}

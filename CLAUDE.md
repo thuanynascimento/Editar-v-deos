@@ -123,6 +123,16 @@ remove-background: se falhar instalando onnxruntime-node, rode
 Filtro "laranja verde" CapCut ~30%: campo `grade` do edl.json =
 `colorbalance=rs=-0.045:gs=0.015:bs=0.03:rm=0.015:gm=0.006:bm=-0.015:rh=0.036:gh=0.012:bh=-0.036,eq=saturation=1.05:contrast=1.03`.
 
+Estilo "Reels jiu-jitsu" (referência da cliente em videos/referencia-reels/ref.mp4, azul #093B6E):
+```bash
+python tools/make_titles_ref.py $H titulos_ref.json --script-color "#093B6E"   # condensado / etiqueta / cta
+python tools/make_captions.py $H --accent "#FFFFFF" --emph-box "#093B6E" --size 58 --y 60 --width 76 ...
+```
+Condensado = Anton branco, sombra sólida azul, palavra por palavra + estrelinha, manuscrito Kaushan.
+Etiqueta = caixas brancas inclinadas em escada, texto azul Montserrat 900. CTA = pílula azul com
+calendário. Fundo claro: manuscrito em azul (branco some). Fontes: npm pack @fontsource/anton
+@fontsource/kaushan-script → assets/fonts/anton.woff2, kaushan.woff2.
+
 Verificar e olhar antes de renderizar:
 ```bash
 cd $H && npx hyperframes check && npx hyperframes snapshot --at 2.5,7.5,14.9
@@ -173,5 +183,6 @@ registrar aqui.
 | `make_captions.py` | 2 | Legendas palavra a palavra com ênfase, posição e quebras ajustáveis |
 | `denoise.py` | 1½ | Redução de ruído de fundo (RNNoise + perfil) → audio_limpo.wav |
 | `gerar_musica.py` | 2 | Música de fundo instrumental gerada localmente (MusicGen) |
+| `make_titles_ref.py` | 2 | Títulos estilo referência jiu-jitsu: condensado, etiquetas, CTA |
 | `make_titles.py` | 2 | Títulos de palavra-chave neon (atrás da pessoa) + manuscrito + encerramento |
 | `render_final.py` | 2 | check → render (chrome-headless-shell) → áudio do video-use → final.mp4 |
