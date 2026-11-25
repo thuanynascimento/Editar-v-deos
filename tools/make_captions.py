@@ -82,6 +82,8 @@ def main() -> None:
     ap.add_argument("--break", dest="breaks", default="", help="força quebra de grupo antes destas palavras/expressões (ex.: \"do que,uma renda\")")
     ap.add_argument("--accent", default="#FFD43B", help="cor das palavras de ênfase")
     ap.add_argument("--color", default="#FFFFFF", help="cor do texto")
+    ap.add_argument("--emph-bg", default="", help="fundo (marca-texto) das palavras de ênfase, ex.: \"#0B3D6E\"; "
+                    "com ele, --accent vira a cor do TEXTO destacado (ex.: #FFFFFF)")
     ap.add_argument("--font", default="Montserrat")
     ap.add_argument("--weight", type=int, default=700)
     ap.add_argument("--emph-weight", type=int, default=900)
@@ -139,7 +141,9 @@ def main() -> None:
         spans[gi][1] = round(min(end, nxt, root_dur), 3)
         spans[gi][0] = round(spans[gi][0], 3)
 
-    shadow = "none" if args.no_shadow else "0 3px 22px rgba(0,0,0,.38), 0 1px 3px rgba(0,0,0,.25)"
+    emph_box = (f"background: {args.emph_bg}; padding: 0.06em 0.26em 0.1em; border-radius: 0.2em; "
+                f"text-shadow: none; box-shadow: 0 4px 14px rgba(0,0,0,.3);") if args.emph_bg else ""
+    shadow = "none" if args.no_shadow else "0 2px 18px rgba(0,0,0,.55), 0 1px 4px rgba(0,0,0,.45)"
     tt = "uppercase" if args.uppercase else "none"
     cap_h = round(size * 2.6)
     top = round(H * args.y / 100 - cap_h / 2)
@@ -179,7 +183,7 @@ def main() -> None:
       font-size: {size}px; font-weight: {args.weight}; line-height: 1.12; color: {args.color};
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
-    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
+    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; {emph_box} }}
   </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}

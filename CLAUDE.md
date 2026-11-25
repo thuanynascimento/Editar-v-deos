@@ -120,6 +120,10 @@ Recorte da pessoa (z 50) por cima dos títulos neon → título ATRÁS dela; o m
 `-esc` NA FRENTE (z 55). Fontes em `assets/fonts/` (npm pack @fontsource/yellowtail @fontsource/montserrat).
 remove-background: se falhar instalando onnxruntime-node, rode
 `npm install onnxruntime-node@1.21.1 --ignore-scripts --prefix ~/.cache/hyperframes/optional/onnxruntime-node@1.21.1`.
+Estilo "academia/jiu-jitsu" (referência em videos/reels-02/referencia): `make_titles.py` com
+`"style": "bloco"` (Anton branco + sombra sólida azul, `"count"` para contagem), `"etiqueta"` (cartão
+branco texto azul), `"pilula"` (azul com ícone pin/link/cal), `--accent "#0B3D6E"`; legendas com
+`--accent "#FFFFFF" --emph-bg "#0B3D6E"` (destaque marca-texto). Fontes: @fontsource/anton e caveat.
 Filtro "laranja verde" CapCut ~30%: campo `grade` do edl.json =
 `colorbalance=rs=-0.045:gs=0.015:bs=0.03:rm=0.015:gm=0.006:bm=-0.015:rh=0.036:gh=0.012:bh=-0.036,eq=saturation=1.05:contrast=1.03`.
 
