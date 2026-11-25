@@ -39,6 +39,8 @@ FONTS = """
     @font-face { font-family: "MontserratT"; font-weight: 900; font-style: italic; src: url("assets/fonts/montserrat-900-italic.woff2") format("woff2"); }
     @font-face { font-family: "MontserratT"; font-weight: 800; font-style: normal; src: url("assets/fonts/montserrat-800-normal.woff2") format("woff2"); }
     @font-face { font-family: "Yellowtail"; font-weight: 400; src: url("assets/fonts/yellowtail.woff2") format("woff2"); }
+    @font-face { font-family: "AntonT"; font-weight: 400; src: url("assets/fonts/anton.woff2") format("woff2"); }
+    @font-face { font-family: "CaveatT"; font-weight: 600; src: url("assets/fonts/caveat-600.woff2") format("woff2"); }
 """
 
 
@@ -138,6 +140,113 @@ def fim(spec: dict, W: int, H: int, accent: str, glow: float):
     return css, markup, js
 
 
+def bloco(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"):
+    """Estilo "bloco" (referência reels-02): PALAVRA em fonte condensada pesada (Anton), branca,
+    com sombra dura deslocada na cor de destaque (azul-marinho); um número/destaque opcional
+    maior ("num", ex. "+20") ao lado; manuscrito (Caveat) branco acima ou abaixo, "escrito"
+    da esquerda para a direita. Entra subindo com leve escala; sai para cima, desfocando."""
+    tid, s, e = spec["id"], spec["start"], spec["end"]
+    big = spec["big"]
+    num = spec.get("num", "")
+    size = spec.get("size", 0) or int(min(150, W * 0.84 / max(1, len(big) * 0.47)))
+    num_size = int(size * spec.get("num_scale", 2.0))
+    cy = H * spec.get("y", 17) / 100
+    top = int(cy - (num_size if num else size) * 0.6)
+    off = max(4, int(size * 0.05))
+    shadow = f"{off}px {off}px 0 {accent}, 0 6px 18px rgba(0,0,0,.25)"
+    script = spec.get("script", "")
+    s_size = int(spec.get("script_size", max(46, size * 0.42)))
+    above = spec.get("script_pos", "below") == "above"
+    s_top = -int(s_size * 1.05) if above else int((num_size if num else size) * 1.08)
+    words = big.split(" ")
+    wl = " ".join(f'<span class="W" id="{tid}-w{i}">{html.escape(w)}</span>' for i, w in enumerate(words))
+    num_html = f'<span class="N" id="{tid}-n">{html.escape(num)}</span>' if num else ""
+    css = f"""
+    #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; overflow: visible; text-align: center; }}
+    #{tid}-big {{ display: inline-flex; align-items: flex-end; gap: {int(size*0.12)}px; white-space: nowrap;
+      font-family: "AntonT", "Anton", sans-serif; font-size: {size}px; line-height: .95; color: #fff;
+      letter-spacing: .005em; text-shadow: {shadow}; text-transform: uppercase; }}
+    #{tid}-big .W {{ display: inline-block; }}
+    #{tid}-n {{ font-size: {num_size}px; line-height: .86; display: inline-block; letter-spacing: -.01em;
+      text-shadow: {int(off*1.6)}px {int(off*1.6)}px 0 {accent}, 0 6px 18px rgba(0,0,0,.25); }}
+    #{tid}-s {{ position: absolute; left: 0; width: {W}px; text-align: center; top: {s_top}px; font-size: {s_size}px; }}
+"""
+    s_html = f'<div id="{tid}-s" class="S2">{html.escape(script)}</div>' if script else ""
+    markup = (f'<div id="{tid}-box" data-layout-allow-overflow data-layout-allow-overlap>'
+              f'<div id="{tid}-big">{num_html}<span>{wl}</span></div>{s_html}</div>')
+    js = []
+    if num:
+        js.append(f'tl.fromTo("#{tid}-n", {{ opacity: 0, y: 50, scale: 1.25 }}, {{ opacity: 1, y: 0, scale: 1, '
+                  f'duration: 0.3, ease: "back.out(1.8)" }}, {spec.get("num_at", s):.3f});')
+        if spec.get("count"):
+            a, b = spec["count"]
+            pre = re.match(r"\D*", num).group(0)
+            v = tid.replace("-", "_")
+            js.append(f'const o_{v} = {{ v: {a} }};')
+            js.append(f'tl.to(o_{v}, {{ v: {b}, duration: {spec.get("count_dur", 0.6)}, ease: "power2.out", '
+                      f'onUpdate: () => {{ document.querySelector("#{tid}-n").textContent = "{pre}" + Math.round(o_{v}.v); }} }}, '
+                      f'{spec.get("num_at", s):.3f});')
+    starts = spec.get("word_at") or [spec.get("big_at", s)] * len(words)
+    for i, t in enumerate(starts):
+        js.append(f'tl.fromTo("#{tid}-w{i}", {{ opacity: 0, y: 46, scale: 1.12 }}, {{ opacity: 1, y: 0, scale: 1, '
+                  f'duration: 0.26, ease: "power3.out" }}, {t + (0.05 * i if not spec.get("word_at") else 0):.3f});')
+    if script:
+        at = spec.get("script_at", s + 0.5)
+        js.append(f'tl.fromTo("#{tid}-s", {{ opacity: 0, clipPath: "inset(-30% 100% -30% 0%)" }}, '
+                  f'{{ opacity: 1, clipPath: "inset(-30% 0% -30% 0%)", duration: 0.45, ease: "power1.out" }}, {at:.3f});')
+    out_at = max(s + 0.6, e - 0.28)
+    js.append(f'tl.to("#{tid}-box", {{ opacity: 0, y: -30, filter: "blur(10px)", duration: 0.26, ease: "power2.in" }}, {out_at:.3f});')
+    return css, markup, js
+
+
+def etiquetas(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"):
+    """Etiquetas brancas inclinadas com texto na cor de destaque (BOLETO, TRABALHO...), que
+    "carimbam" uma a uma; opcionalmente são riscadas juntas em "strike_at"."""
+    tid, s, e = spec["id"], spec["start"], spec["end"]
+    items = spec["items"]  # [{"text","at","x","y","rot"}] x,y em % (centro)
+    fs = spec.get("size", 44)
+    css = f"""
+    .{tid}-tag {{ position: absolute; transform: translate(-50%,-50%); }}
+    .{tid}-tag .in {{ position: relative; background: #fff; color: {accent}; font-family: "MontserratT", sans-serif;
+      font-weight: 900; font-size: {fs}px; padding: {int(fs*.22)}px {int(fs*.5)}px; border-radius: {int(fs*.28)}px;
+      letter-spacing: .01em; box-shadow: 0 8px 22px rgba(0,0,0,.28); white-space: nowrap; }}
+    .{tid}-tag .ln {{ position: absolute; left: -6%; top: 50%; width: 112%; height: {max(5,int(fs*.13))}px; margin-top: -{max(3,int(fs*.065))}px;
+      background: {accent}; border-radius: 4px; transform-origin: left center; transform: scaleX(0); }}
+"""
+    mk, js = [], []
+    for i, it in enumerate(items):
+        mk.append(f'<div class="{tid}-tag" style="left:{it["x"]}%; top:{it["y"]}%;"><div class="in" id="{tid}-t{i}" '
+                  f'style="transform: rotate({it.get("rot", -4)}deg)">{html.escape(it["text"])}<div class="ln" id="{tid}-l{i}"></div></div></div>')
+        js.append(f'tl.fromTo("#{tid}-t{i}", {{ opacity: 0, scale: 1.7 }}, {{ opacity: 1, scale: 1, duration: 0.22, '
+                  f'ease: "back.out(2.2)" }}, {it["at"]:.3f});')
+    if spec.get("strike_at") is not None:
+        for i in range(len(items)):
+            js.append(f'tl.to("#{tid}-l{i}", {{ scaleX: 1, duration: 0.22, ease: "power2.out" }}, {spec["strike_at"] + 0.08 * i:.3f});')
+            js.append(f'tl.to("#{tid}-t{i}", {{ opacity: 0.75, duration: 0.2 }}, {spec["strike_at"] + 0.08 * i:.3f});')
+    js.append(f'tl.to(".{tid}-tag", {{ opacity: 0, scale: 0.85, duration: 0.22, ease: "power2.in", stagger: 0.04 }}, {max(s + 0.5, e - 0.3):.3f});')
+    markup = f'<div id="{tid}-box" data-layout-allow-overflow data-layout-allow-overlap>{"".join(mk)}</div>'
+    return css, markup, js
+
+
+def selo(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all"):
+    """Selo de localização: pílula na cor de destaque com ícone de pino e texto branco."""
+    tid, s, e = spec["id"], spec["start"], spec["end"]
+    fs = spec.get("size", 40)
+    pin = ('<svg width="{0}" height="{0}" viewBox="0 0 24 24" style="flex:none"><path fill="#fff" d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 '
+           '7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>').format(int(fs * 1.05))
+    css = f"""
+    #{tid}-box {{ position: absolute; left: 0; width: {W}px; top: {int(H*spec.get("y",72)/100 - fs)}px; text-align: center; }}
+    #{tid}-p {{ display: inline-flex; align-items: center; gap: {int(fs*.3)}px; background: {accent}; color: #fff;
+      font-family: "MontserratT", sans-serif; font-weight: 800; font-size: {fs}px; padding: {int(fs*.35)}px {int(fs*.6)}px;
+      border-radius: {int(fs*.3)}px; box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 10px 26px rgba(0,0,0,.3); white-space: nowrap; }}
+"""
+    markup = f'<div id="{tid}-box" data-layout-allow-overflow><div id="{tid}-p">{pin}<span>{html.escape(spec["text"])}</span></div></div>'
+    js = [f'tl.fromTo("#{tid}-p", {{ opacity: 0, y: 40, scale: 0.8 }}, {{ opacity: 1, y: 0, scale: 1, duration: 0.35, ease: "back.out(1.8)" }}, {s:.3f});',
+          f'tl.to("#{tid}-p", {{ opacity: 0, y: 20, duration: 0.25, ease: "power2.in" }}, {max(s + 0.6, e - 0.28):.3f});']
+    return css, markup, js
+
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("hf_dir", type=Path)
@@ -152,7 +261,7 @@ def main() -> None:
     specs = json.loads(args.spec.read_text())
     expanded = []
     for sp in specs:
-        if sp.get("style") != "fim" and sp.get("script") and sp.get("split", True):
+        if sp.get("style", "neon") == "neon" and sp.get("script") and sp.get("split", True):
             expanded.append({**sp, "_part": "big"})
             expanded.append({**sp, "id": sp["id"] + "-esc", "_part": "script", "z": sp.get("z_script", 55)})
         else:
@@ -160,8 +269,8 @@ def main() -> None:
 
     for sp in expanded:
         tid = sp["id"]
-        maker = fim if sp.get("style") == "fim" else neon
-        css, markup, js = (maker(sp, W, H, args.accent, args.glow, sp.get("_part", "all")) if maker is neon
+        maker = {"fim": fim, "bloco": bloco, "etiquetas": etiquetas, "selo": selo}.get(sp.get("style"), neon)
+        css, markup, js = (maker(sp, W, H, args.accent, args.glow, sp.get("_part", "all")) if maker is not fim
                            else maker(sp, W, H, args.accent, args.glow))
         # tempos do spec são globais; a cena começa em sp["start"] → converte para local
         s0 = sp["start"]
@@ -174,6 +283,8 @@ def main() -> None:
     #root {{ position: absolute; inset: 0; background: transparent; }}
     .S {{ font-family: "Yellowtail", cursive; color: #fff; white-space: nowrap; transform: rotate(-5deg);
       text-shadow: 0 3px 14px rgba(0,0,0,.45); line-height: 1; }}
+    .S2 {{ font-family: "CaveatT", "Caveat", cursive; font-weight: 600; color: #fff; white-space: nowrap;
+      transform: rotate(-4deg); text-shadow: 0 2px 10px rgba(0,0,0,.45); line-height: 1; }}
 {css}
   </style>
   <div id="root" data-composition-id="{tid}" data-width="{W}" data-height="{H}" data-layout-allow-overflow>
@@ -195,7 +306,7 @@ def main() -> None:
         subprocess.run([sys.executable, str(ROOT / "tools" / "add_overlay.py"), str(hf), "x", tid,
                         str(s0), str(dur), "--custom"], check=True)
         # camada: "fim" fica NA FRENTE do recorte da pessoa (z 50); os neon ficam atrás dele
-        z = sp.get("z", 60 if sp.get("style") == "fim" else None)
+        z = sp.get("z", 60 if sp.get("style") in ("fim", "etiquetas", "selo") else None)
         if z is not None:
             idx = hf / "index.html"
             t = idx.read_text()
