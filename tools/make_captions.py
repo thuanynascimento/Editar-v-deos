@@ -94,6 +94,11 @@ def main() -> None:
     ap.add_argument("--pause", type=float, default=0.18, help="pausa que quebra o grupo (s)")
     ap.add_argument("--uppercase", action="store_true")
     ap.add_argument("--no-shadow", action="store_true", help="tira até a sombra suave")
+    ap.add_argument("--shadow", type=float, default=1.0,
+                    help="força da sombra (1 = suave padrão; 2–2.5 sobre fundo claro, ex.: kimono branco)")
+    ap.add_argument("--emph-box", default="",
+                    help="destaque em caixa: cor de fundo da palavra de ênfase (ex.: \"#5CE1E6\"); "
+                         "o texto da ênfase usa --accent (ex.: \"#000000\")")
     ap.add_argument("--exclude", default="",
                     help="faixas 'ini-fim,ini-fim' (timeline do corte) cujas palavras NÃO viram legenda "
                          "(ex.: já aparecem num título grande)")
@@ -139,7 +144,11 @@ def main() -> None:
         spans[gi][1] = round(min(end, nxt, root_dur), 3)
         spans[gi][0] = round(spans[gi][0], 3)
 
-    shadow = "none" if args.no_shadow else "0 3px 22px rgba(0,0,0,.38), 0 1px 3px rgba(0,0,0,.25)"
+    k = args.shadow
+    shadow = "none" if args.no_shadow else (f"0 3px {round(22 * k)}px rgba(0,0,0,{min(.38 * k, .9):.2f}), "
+                                            f"0 1px {round(3 * k)}px rgba(0,0,0,{min(.25 * k, .9):.2f})")
+    emph_box = (f" background: {args.emph_box}; padding: 0.02em 0.22em 0.06em; border-radius: 0.16em;"
+                f" text-shadow: none; box-shadow: 0 4px 18px rgba(0,0,0,.35);") if args.emph_box else ""
     tt = "uppercase" if args.uppercase else "none"
     cap_h = round(size * 2.6)
     top = round(H * args.y / 100 - cap_h / 2)
@@ -179,7 +188,7 @@ def main() -> None:
       font-size: {size}px; font-weight: {args.weight}; line-height: 1.12; color: {args.color};
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
-    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
+    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em;{emph_box} }}
   </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}
