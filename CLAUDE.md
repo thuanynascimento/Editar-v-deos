@@ -123,6 +123,14 @@ remove-background: se falhar instalando onnxruntime-node, rode
 Filtro "laranja verde" CapCut ~30%: campo `grade` do edl.json =
 `colorbalance=rs=-0.045:gs=0.015:bs=0.03:rm=0.015:gm=0.006:bm=-0.015:rh=0.036:gh=0.012:bh=-0.036,eq=saturation=1.05:contrast=1.03`.
 
+Estilo "Renzo Gracie" (referência em videos/reels-02/referencia): azul #013971, sem recorte da pessoa.
+```bash
+python tools/make_estilo_rg.py $H graficos.json      # tags (riscadas) / title (Anton + Caveat) / pin
+python tools/make_captions.py $H --emphasis "..." --accent "#FFFFFF" --emph-bg "#013971" --size 54 --y 59 --width 76
+```
+Destaque de legenda: UMA palavra por frase (palavras seguidas viram caixas separadas).
+Fontes: anton-400, caveat-600, montserrat-700/800/900 em assets/fonts/.
+
 Verificar e olhar antes de renderizar:
 ```bash
 cd $H && npx hyperframes check && npx hyperframes snapshot --at 2.5,7.5,14.9
@@ -174,4 +182,5 @@ registrar aqui.
 | `denoise.py` | 1½ | Redução de ruído de fundo (RNNoise + perfil) → audio_limpo.wav |
 | `gerar_musica.py` | 2 | Música de fundo instrumental gerada localmente (MusicGen) |
 | `make_titles.py` | 2 | Títulos de palavra-chave neon (atrás da pessoa) + manuscrito + encerramento |
+| `make_estilo_rg.py` | 2 | Estilo cliente Renzo Gracie (reels-02): etiquetas riscadas, títulos Anton + manuscrito, pílula de local |
 | `render_final.py` | 2 | check → render (chrome-headless-shell) → áudio do video-use → final.mp4 |

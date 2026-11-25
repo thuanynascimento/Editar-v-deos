@@ -85,6 +85,8 @@ def main() -> None:
     ap.add_argument("--font", default="Montserrat")
     ap.add_argument("--weight", type=int, default=700)
     ap.add_argument("--emph-weight", type=int, default=900)
+    ap.add_argument("--emph-bg", default="",
+                    help="cor de fundo (caixa) das palavras de ênfase, ex. \"#013971\" com --accent \"#FFFFFF\"")
     ap.add_argument("--size", type=int, default=0, help="px (0 = automático: 6.8%% da largura)")
     ap.add_argument("--width", type=float, default=72.0,
                     help="largura máxima da legenda em %% da tela (72 deixa livre a coluna de botões do Reels/TikTok)")
@@ -168,6 +170,8 @@ def main() -> None:
             if (hf / "assets" / "fonts" / f"montserrat-{wgt}-normal.woff2").exists():
                 font_faces += (f'    @font-face {{ font-family: "Montserrat"; font-weight: {wgt}; '
                                f'src: url("assets/fonts/montserrat-{wgt}-normal.woff2") format("woff2"); }}\n')
+    emph_box = (f"background: {args.emph_bg}; padding: 0.06em 0.22em 0.1em; border-radius: 0.16em; "
+                "text-shadow: none; box-shadow: 0 4px 16px rgba(0,0,0,.25);") if args.emph_bg else ""
     comp = f"""<!-- Legendas geradas por tools/make_captions.py — edite o texto direto aqui ou rode o script de novo. -->
 <template>
   <style>
@@ -179,7 +183,7 @@ def main() -> None:
       font-size: {size}px; font-weight: {args.weight}; line-height: 1.12; color: {args.color};
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
-    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
+    .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; {emph_box} }}
   </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}
