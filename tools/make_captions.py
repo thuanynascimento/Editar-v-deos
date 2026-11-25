@@ -94,6 +94,7 @@ def main() -> None:
     ap.add_argument("--pause", type=float, default=0.18, help="pausa que quebra o grupo (s)")
     ap.add_argument("--uppercase", action="store_true")
     ap.add_argument("--no-shadow", action="store_true", help="tira até a sombra suave")
+    ap.add_argument("--shadow", default="", help="text-shadow CSS personalizado (ex.: sombra mais forte sobre roupa clara)")
     ap.add_argument("--exclude", default="",
                     help="faixas 'ini-fim,ini-fim' (timeline do corte) cujas palavras NÃO viram legenda "
                          "(ex.: já aparecem num título grande)")
@@ -139,7 +140,7 @@ def main() -> None:
         spans[gi][1] = round(min(end, nxt, root_dur), 3)
         spans[gi][0] = round(spans[gi][0], 3)
 
-    shadow = "none" if args.no_shadow else "0 3px 22px rgba(0,0,0,.38), 0 1px 3px rgba(0,0,0,.25)"
+    shadow = "none" if args.no_shadow else args.shadow if args.shadow else "0 3px 22px rgba(0,0,0,.38), 0 1px 3px rgba(0,0,0,.25)"
     tt = "uppercase" if args.uppercase else "none"
     cap_h = round(size * 2.6)
     top = round(H * args.y / 100 - cap_h / 2)
