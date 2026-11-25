@@ -164,7 +164,7 @@ def bloco(spec: dict, W: int, H: int, accent: str, glow: float, part: str = "all
     css = f"""
     #{tid}-box {{ position: absolute; left: 0; top: {top}px; width: {W}px; overflow: visible; text-align: center; }}
     #{tid}-big {{ display: inline-flex; align-items: flex-end; gap: {int(size*0.12)}px; white-space: nowrap;
-      font-family: "AntonT", "Anton", sans-serif; font-size: {size}px; line-height: .95; color: #fff;
+      font-family: "AntonT", sans-serif; font-size: {size}px; line-height: .95; color: #fff;
       letter-spacing: .005em; text-shadow: {shadow}; text-transform: uppercase; }}
     #{tid}-big .W {{ display: inline-block; }}
     #{tid}-n {{ font-size: {num_size}px; line-height: .86; display: inline-block; letter-spacing: -.01em;
@@ -283,8 +283,8 @@ def main() -> None:
     #root {{ position: absolute; inset: 0; background: transparent; }}
     .S {{ font-family: "Yellowtail", cursive; color: #fff; white-space: nowrap; transform: rotate(-5deg);
       text-shadow: 0 3px 14px rgba(0,0,0,.45); line-height: 1; }}
-    .S2 {{ font-family: "CaveatT", "Caveat", cursive; font-weight: 600; color: #fff; white-space: nowrap;
-      transform: rotate(-4deg); text-shadow: 0 2px 10px rgba(0,0,0,.45); line-height: 1; }}
+    .S2 {{ font-family: "CaveatT", cursive; font-weight: 600; color: #fff; white-space: nowrap;
+      transform: rotate(-4deg); text-shadow: 3px 3px 0 {args.accent}, 0 2px 10px rgba(0,0,0,.35); line-height: 1; }}
 {css}
   </style>
   <div id="root" data-composition-id="{tid}" data-width="{W}" data-height="{H}" data-layout-allow-overflow>

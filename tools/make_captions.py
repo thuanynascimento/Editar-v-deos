@@ -93,6 +93,9 @@ def main() -> None:
     ap.add_argument("--max-chars", type=int, default=20)
     ap.add_argument("--pause", type=float, default=0.18, help="pausa que quebra o grupo (s)")
     ap.add_argument("--uppercase", action="store_true")
+    ap.add_argument("--shadow", default="", help="text-shadow CSS personalizado (ex. contorno escuro para fundo claro)")
+    ap.add_argument("--emph-bg", default="", help="fundo (caixa) atrás das palavras de ênfase, ex. \"#013971\"")
+    ap.add_argument("--emph-color", default="", help="cor do texto da ênfase quando há --emph-bg (padrão: --accent)")
     ap.add_argument("--no-shadow", action="store_true", help="tira até a sombra suave")
     ap.add_argument("--exclude", default="",
                     help="faixas 'ini-fim,ini-fim' (timeline do corte) cujas palavras NÃO viram legenda "
@@ -139,7 +142,11 @@ def main() -> None:
         spans[gi][1] = round(min(end, nxt, root_dur), 3)
         spans[gi][0] = round(spans[gi][0], 3)
 
-    shadow = "none" if args.no_shadow else "0 3px 22px rgba(0,0,0,.38), 0 1px 3px rgba(0,0,0,.25)"
+    shadow = "none" if args.no_shadow else (args.shadow or "0 3px 22px rgba(0,0,0,.38), 0 1px 3px rgba(0,0,0,.25)")
+    emph_css = ""
+    if args.emph_bg:
+        emph_css = (f"    .e {{ background: {args.emph_bg}; color: {args.emph_color or args.accent}; text-shadow: none; "
+                    f"padding: 0.02em 0.22em 0.06em; border-radius: 0.16em; box-shadow: 0 6px 16px rgba(0,0,0,.25); }}\n")
     tt = "uppercase" if args.uppercase else "none"
     cap_h = round(size * 2.6)
     top = round(H * args.y / 100 - cap_h / 2)
@@ -180,7 +187,7 @@ def main() -> None:
       text-transform: {tt}; letter-spacing: -0.01em; text-shadow: {shadow}; opacity: 0; }}
     .w {{ display: inline-block; transform-origin: 50% 60%; }}
     .e {{ color: {args.accent}; font-weight: {args.emph_weight}; margin: 0 0.1em; }}
-  </style>
+{emph_css}  </style>
   <div id="root" data-composition-id="legendas" data-width="{W}" data-height="{H}" data-layout-allow-caption-zone>
 {chr(10).join(groups_html)}
   </div>
